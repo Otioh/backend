@@ -24,7 +24,7 @@ const responseObj={
 
 
 const multer  = require('multer')
-const upload = multer({ dest: 'uploads/' })
+const upload = multer({ dest: 'assets/', filename:'newimage.jpg', fileName:'newImage.jpg' })
 
 
 app.post('/profile', upload.single('avatar'), function (req, res, next) {
