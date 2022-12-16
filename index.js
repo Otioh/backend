@@ -24,9 +24,21 @@ const responseObj={
 
 
 const multer  = require('multer')
-const upload = multer({ dest: 'assets/', filename:'newimage.jpg', fileName:'newImage.jpg' })
 
+const multerStorage = multer.diskStorage({
+    destination:(req, file, cb)=>{
+cb(null, 'assets')
+    },
+    filename:(req, file, cb)=>{
+        let ext=file.mimetype.split('/')[1];
+    console.log(req.body);
+cb(null, `file1.${ext}`)
+    }
+})
 
+const upload=multer({
+    storage:multerStorage
+})
 app.post('/profile', upload.single('avatar'), function (req, res, next) {
   // req.file is the `avatar` file
   // req.body will hold the text fields, if there were any
