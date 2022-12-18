@@ -31,17 +31,25 @@ cb(null, 'assets')
     },
     filename:(req, file, cb)=>{
         let ext=file.mimetype.split('/')[1];
-    console.log(req.body);
-cb(null, `file1.${ext}`)
+        const email =req.params.email;
+
+        let name=`${email?.split('@')[0]}--${Math.random(0,300)}`;
+cb(null, `${name}.${ext}`)
+pool.query("UPDATE users SET image='"+name+"' WHERE email='"+email+"'", (error, result, row)=>{
+   
+})
     }
 })
 
 const upload=multer({
-    storage:multerStorage
+    storage:multerStorage  
 })
-app.post('/profile', upload.single('avatar'), function (req, res, next) {
+app.post('/profile/:email', upload.single('avatar'), function (req, res, next) {
   // req.file is the `avatar` file
   // req.body will hold the text fields, if there were any
+
+
+
 })
 
 app.post('/photos/upload', upload.array('photos', 12), function (req, res, next) {
@@ -173,7 +181,7 @@ app.post('/auth', (req, res)=>{
 
 
 app.post('/users', (req, res)=>{
-    let {first_name, surname, email, password, matric, phone}=req.body;
+    let {first_name, surname, email, password, matric, phone }=req.body;
     if(first_name===""||surname===""||email===""||password===""||matric===""||phone===""){
         res.send({...responseObj, message:"All Fields are required"})
     }else{
@@ -184,7 +192,7 @@ app.post('/users', (req, res)=>{
             if(result.length>0){
                 res.send({...responseObj, message:"Email or Matric Already Exist"})
             }   else{
-                pool.query("INSERT INTO `users` (`id`, `first_name`, `surname`, `email`, `password`, `phone`, `matric`, `created_at`, `verified`, `verify_code`,  `campus`, `institution`,  `department`, `level`, `courses`, `image`) VALUES (NULL, '"+first_name+"', '"+surname+"', '"+email+"', '"+password+"', '"+phone+"', '"+matric+"', '"+new Date()+"', 'false', '', '',  '', '', '', '', '')", (error, result, row)=>{
+                pool.query("INSERT INTO `users` (`id`, `first_name`, `surname`, `email`, `password`, `phone`, `matric`, `created_at`, `verified`, `verify_code`,  `campus`, `institution`,  `department`, `level`, `courses`, `image`, `coins`) VALUES (NULL, '"+first_name+"', '"+surname+"', '"+email+"', '"+password+"', '"+phone+"', '"+matric+"', '"+new Date()+"', 'false', '', '',  '', '', '', '', '',0)", (error, result, row)=>{
                    if(error){
                     res.send({...responseObj, message:"Error Occurred"+error})
                    }else{
