@@ -1,6 +1,7 @@
 const express=require('express');
 const mysql=require('mysql');
 const cors=require('cors');
+const path=require('path');
 const mailer=require('./mailer');
 const pool=mysql.createPool({
     host:'localhost',
@@ -44,12 +45,16 @@ pool.query("UPDATE users SET image='"+name+"' WHERE email='"+email+"'", (error, 
 const upload=multer({
     storage:multerStorage  
 })
+
+
+
+app.use(express.static(path.join(__dirname, "assets")));
+
+
+
 app.post('/profile/:email', upload.single('avatar'), function (req, res, next) {
   // req.file is the `avatar` file
   // req.body will hold the text fields, if there were any
-
-
-
 })
 
 app.post('/photos/upload', upload.array('photos', 12), function (req, res, next) {
@@ -182,7 +187,7 @@ app.post('/auth', (req, res)=>{
 
 app.post('/users', (req, res)=>{
     let {first_name, surname, email, password, matric, phone }=req.body;
-    if(first_name===""||surname===""||email===""||password===""||matric===""||phone===""){
+    if(first_name===""||surname===""||email===""||password===""||matric===""||phone==="" || first_name===undefined||surname===undefined||email===undefined||password===undefined||matric===undefined||phone===undefined){
         res.send({...responseObj, message:"All Fields are required"})
     }else{
         pool.query("SELECT * FROM users WHERE email='"+email+"' OR matric='"+matric+"'", (error, result, row)=>{
@@ -320,6 +325,42 @@ pool.query("SELECT * FROM allcourse WHERE code='"+code+"'", (error, result, row)
     }
 })
 })
+
+
+
+
+
+app.get('/assignments/:campus', (req, res)=>{
+
+    pool.query("SELECT * FROM assignments WHERE campus='"+req.params.campus+"'", (error, result, row)=>{
+        if(error){
+            res.send({...responseObj, success:false, message:"Error Fetching Assignments", data:error})
+          
+        }else{
+            res.send({...responseObj, success:true, message:"Assignments Fetched Successfully", data:result})
+
+        }
+    })
+
+})
+
+
+
+
+app.post('/assignments', (req, res)=>{
+    const  {} =req.body;
+                pool.query("INSERT INTO `assignments` (`id`, `code`, `title`, `campus`, `department`, `level`, `user`) VALUES (NULL, '"+code+"', '"+title+"', '"+campus+"', '"+department+"', '"+level+"', '"+user+"');", (error, result, row)=>{
+                    if(error){
+                        res.send({...responseObj, success:false, message:"Error Creating Course", data:error})
+                    }else{
+                        res.send({...responseObj, success:true, message:"Courses Created Successfully"})
+                
+                    }
+    })
+    })
+    
+
+
 
 
 

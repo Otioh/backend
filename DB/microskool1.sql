@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Dec 23, 2022 at 12:50 PM
+-- Generation Time: Dec 19, 2022 at 12:34 AM
 -- Server version: 10.4.27-MariaDB
 -- PHP Version: 8.1.12
 
@@ -59,10 +59,7 @@ CREATE TABLE `assignments` (
   `deadline` varchar(255) NOT NULL,
   `lecturer` text NOT NULL,
   `user` varchar(255) NOT NULL,
-  `image` varchar(255) NOT NULL,
-  `campus` varchar(255) NOT NULL,
-  `wrong` int(11) NOT NULL,
-  `correct` int(11) NOT NULL
+  `image` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -118,9 +115,7 @@ CREATE TABLE `lectures` (
   `date` varchar(255) NOT NULL,
   `video` varchar(255) NOT NULL,
   `user` varchar(255) NOT NULL,
-  `campus` varchar(255) NOT NULL,
-  `wrong` int(11) NOT NULL,
-  `correct` int(11) NOT NULL
+  `campus` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -136,9 +131,7 @@ CREATE TABLE `schedule` (
   `time_out` varchar(255) NOT NULL,
   `venue` varchar(255) NOT NULL,
   `day` varchar(255) NOT NULL,
-  `user` varchar(255) NOT NULL,
-  `wrong` int(11) NOT NULL,
-  `correct` int(11) NOT NULL
+  `user` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -174,20 +167,6 @@ CREATE TABLE `users` (
 INSERT INTO `users` (`id`, `first_name`, `surname`, `matric`, `email`, `password`, `institution`, `campus`, `department`, `level`, `phone`, `image`, `created_at`, `verified`, `verify_code`, `courses`, `coins`) VALUES
 (1, 'Emmanuel', 'Erim', '17/0459987687', 'bryonerim@yahoo.com', 'bryon3662', 'University of Calabar, Calabar', 'unical', 'Computer Science', '100', '09060966606', '', 'Sat Dec 10 2022 19:20:29 GMT+0100 (West Africa Standard Time)', 'true', '374996', '', 0),
 (2, 'Emmanuel', 'Erim', 'Microskool', 'admin@microskool.com', 'bryon3662', 'University of Calabar, Calabar', 'unical', 'Computer Science', '300', '09060966606', 'admin--0.5515096482400057', 'Fri Dec 16 2022 23:17:14 GMT+0100 (West Africa Standard Time)', 'true', '423535', '', 0);
-
--- --------------------------------------------------------
-
---
--- Table structure for table `votes`
---
-
-CREATE TABLE `votes` (
-  `id` int(11) NOT NULL,
-  `subject` varchar(255) NOT NULL,
-  `type` varchar(255) NOT NULL,
-  `user` varchar(255) NOT NULL,
-  `subject_id` varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Indexes for dumped tables
@@ -236,12 +215,6 @@ ALTER TABLE `users`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `votes`
---
-ALTER TABLE `votes`
-  ADD PRIMARY KEY (`id`);
-
---
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -285,13 +258,7 @@ ALTER TABLE `schedule`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
-
---
--- AUTO_INCREMENT for table `votes`
---
-ALTER TABLE `votes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
