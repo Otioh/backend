@@ -35,8 +35,9 @@ cb(null, 'assets')
         const email =req.params.email;
 
         let name=`${email?.split('@')[0]}--${Math.random(0,300)}`;
+        let saveName=name+"."+ext;
 cb(null, `${name}.${ext}`)
-pool.query("UPDATE users SET image='"+name+"' WHERE email='"+email+"'", (error, result, row)=>{
+pool.query("UPDATE users SET image='http://192.168.43.31:5000/assets/"+saveName+"' WHERE email='"+email+"'", (error, result, row)=>{
    
 })
     }
@@ -46,15 +47,14 @@ const upload=multer({
     storage:multerStorage  
 })
 
-
+app.use('/assets', express.static('assets'))
 
 app.use(express.static(path.join(__dirname, "assets")));
 
 
 
 app.post('/profile/:email', upload.single('avatar'), function (req, res, next) {
-  // req.file is the `avatar` file
-  // req.body will hold the text fields, if there were any
+    res.send({...responseObj, message:"Upload Successful", success:true })
 })
 
 app.post('/photos/upload', upload.array('photos', 12), function (req, res, next) {
@@ -117,17 +117,23 @@ app.get('/auth/:email', (req, res)=>{
         if(error){
             res.send({...responseObj, message:"Error Retrieving Users"})
         }else{
-          if(result[0]?.verified==='true'){
-            res.send({...responseObj, data:result, success:true, message:"Users Validity Retrieved Successfully"})
-          }else{
-            let code=Math.floor(Math.random()*1000000);
-            pool.query("UPDATE users SET verify_code="+code+" WHERE email='"+req.params.email+"'", (error, result, row)=>{
-                if(error){}
-            })
-            
-            mailer({recipients:req.params.email, subject:'Email Verification - Microskool', message:'Use this code to verify your Email: '+code})
-            res.send({...responseObj, success:false, message:"Check your mailbox for a verification code "+req.params.email})
-          }            
+            if(result.length>0){
+                if(result[0]?.verified==='true'){
+                    res.send({...responseObj, data:false, success:true, message:"Users Validity Retrieved Successfully"})
+                  }else{
+    
+                    let code=Math.floor(Math.random()*1000000);
+                    pool.query("UPDATE users SET verify_code="+code+" WHERE email='"+req.params.email+"'", (error, result, row)=>{
+                        if(error){}
+                    })
+                    
+                    mailer({recipients:req.params.email, subject:'Email Verification - Microskool', message:'Use this code to verify your Email: '+code})
+                    res.send({...responseObj, success:true, message:"Check your mailbox for a verification code "+req.params.email, data:true})
+                  } 
+            }else{
+                res.send({...responseObj, success:false, message:"No user found with "+req.params.email})
+            }
+                   
         }
     })
 })
@@ -369,7 +375,7 @@ app.post('/assignments', (req, res)=>{
 
 
 
-
+ 
 
 
 
