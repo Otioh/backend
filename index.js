@@ -255,6 +255,33 @@ app.get('/users/:email', (req, res)=>{
 
 
 
+app.get('/mycourses/:email', (req, res)=>{
+    pool.query("SELECT * FROM mycourses WHERE user='"+req.params.email+"'", (error, result, row)=>{
+        if(error){
+            res.send({...responseObj, message:"Error Retrieving mycourses"})
+        }else{
+            res.send({...responseObj, data:result, success:true, message:"mycourses Retrieved Successfully"})
+        }
+
+    })
+
+})
+
+app.delete('/mycourses/:id', (req, res)=>{
+    pool.query("DELETE FROM mycourses WHERE id='"+req.params.id+"'", (error, result, row)=>{
+        if(error){
+            res.send({...responseObj, message:"Error Deleting mycourses"})
+        }else{
+            res.send({...responseObj, data:result, success:true, message:"Deleted Successfully"})
+        }
+
+    })
+
+})
+
+
+
+
 
 
 app.get('/courses/:campus', (req, res)=>{
@@ -332,6 +359,23 @@ pool.query("SELECT * FROM allcourse WHERE code='"+code+"'", (error, result, row)
 })
 })
 
+
+
+
+
+app.post('/mycourses', (req, res)=>{
+    const {code, user} =req.body;
+
+                pool.query("INSERT INTO `mycourses` (`id`, `course`,`user`) VALUES (NULL, '"+code+"', '"+user+"');", (error, result, row)=>{
+                    if(error){
+                        res.send({...responseObj, success:false, message:"Error Adding Course", data:error})
+                    }else{
+                        res.send({...responseObj, success:true, message:"Course Added Successfully"})
+                
+                    }
+                })
+    })
+    
 
 
 
