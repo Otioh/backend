@@ -217,13 +217,13 @@ app.post('/users', (req, res)=>{
 
 
 
-
+ 
 
 
 app.post('/users/:email', (req, res)=>{
-    let {first_name, surname,  matric, institution, campus, department, level, courses}=req.body;
-
-                pool.query("UPDATE `users` SET `first_name`='"+first_name+"',  `surname`='"+surname+"', `matric`='"+matric+"', `campus`='"+campus+"', `institution`='"+institution+"',  `department`='"+department+"', `level`='"+level+"', `courses`='"+courses+"' WHERE email='"+req.params.email+"'", (error, result, row)=>{
+    let {first_name, surname,  matric, institution, campus, department, level, courses, coins}=req.body;
+console.log(coins)
+                pool.query("UPDATE `users` SET `first_name`='"+first_name+"',  `surname`='"+surname+"', `matric`='"+matric+"', `campus`='"+campus+"', `institution`='"+institution+"',  `department`='"+department+"', `level`='"+level+"', `courses`='"+courses+"', `coins`="+coins+" WHERE email='"+req.params.email+"'", (error, result, row)=>{
                    if(error){
                     res.send({...responseObj, message:"Error Occurred"+error})
                    }else{
@@ -337,18 +337,23 @@ app.get('/departments', (req, res)=>{
 
 app.post('/courses', (req, res)=>{
 const {code, title, campus, department, level, user} =req.body;
+if(code==='' || code===undefined || title===''|| title===undefined || level==='' ||level===undefined){
+    res.send({...responseObj, success:false, message:"All Fields are required", data:[]})
+             
+
+}else{
 pool.query("SELECT * FROM allcourse WHERE code='"+code+"'", (error, result, row)=>{
     if(error){
         res.send({...responseObj, success:false, message:"Error Validating Course", data:error})
     }else{
         if(result.length>0){
-            res.send({...responseObj, success:false, message:"Course Already Exist", data:error})
+            res.send({...responseObj, success:false, message:"Course ["+code+"] Already Exist", data:error})
         }else{
             pool.query("INSERT INTO `allcourse` (`id`, `code`, `title`, `campus`, `department`, `level`, `user`) VALUES (NULL, '"+code+"', '"+title+"', '"+campus+"', '"+department+"', '"+level+"', '"+user+"');", (error, result, row)=>{
                 if(error){
                     res.send({...responseObj, success:false, message:"Error Creating Course", data:error})
                 }else{
-                    res.send({...responseObj, success:true, message:"Courses Created Successfully"})
+                    res.send({...responseObj, success:true, message:"Course ["+code+"] Created Successfully"})
             
                 }
             
@@ -357,6 +362,7 @@ pool.query("SELECT * FROM allcourse WHERE code='"+code+"'", (error, result, row)
         }
     }
 })
+}
 })
 
 
@@ -365,15 +371,25 @@ pool.query("SELECT * FROM allcourse WHERE code='"+code+"'", (error, result, row)
 
 app.post('/mycourses', (req, res)=>{
     const {code, user} =req.body;
-
+    pool.query("SELECT * FROM mycourses WHERE course='"+code+"' && user='"+user+"'", (error, result, row)=>{
+        if(error){
+            res.send({...responseObj, success:false, message:"Error Validating Course", data:error})
+        }else{
+            if(result.length>0){
+                res.send({...responseObj, success:false, message:"Course ["+code+"] Already Exist for "+user, data:error})
+            }else{
+    
                 pool.query("INSERT INTO `mycourses` (`id`, `course`,`user`) VALUES (NULL, '"+code+"', '"+user+"');", (error, result, row)=>{
                     if(error){
                         res.send({...responseObj, success:false, message:"Error Adding Course", data:error})
                     }else{
-                        res.send({...responseObj, success:true, message:"Course Added Successfully"})
+                        res.send({...responseObj, success:true, message:code+" Added Successfully"})
                 
                     }
                 })
+            }
+        }
+    })
     })
     
 
@@ -408,10 +424,52 @@ app.post('/assignments', (req, res)=>{
                     }
     })
     })
+
+    
+    app.post('/transactions', (req, res)=>{
+        const  {transaction_id, item, description_sender, description_receiver, sender, receiver, amount, status} =req.body;
+                    pool.query("INSERT INTO `transactions` (`id`, `transaction_id`, `item`, `description_sender`, `description_receiver`, `sender`, `receiver`, `amount`, `date`, `status`) VALUES (NULL, '"+transaction_id+"', '"+item+"', '"+description_sender+"', '"+description_receiver+"', '"+sender+"', '"+receiver+"', "+amount+", '"+new Date()+"', '"+status+"');", (error, result, row)=>{
+                        if(error){
+                            res.send({...responseObj, success:false, message:"Error Posting Transaction", data:error})
+                        }else{
+                            res.send({...responseObj, success:true, message:"Transaction Posted Successfully"})
+                    
+                        }
+        })
+        })
     
 
 
+        app.get('/transactions/:user', (req, res)=>{
 
+            pool.query("SELECT * FROM transactions WHERE sender='"+req.params.user+"' OR receiver='"+req.params.user+"'", (error, result, row)=>{
+                if(error){
+                    res.send({...responseObj, success:false, message:"Error Fetching Transactions", data:error})
+                  
+                }else{
+                    res.send({...responseObj, success:true, message:"Transactions Fetched Successfully", data:result})
+        
+                }
+            })
+        
+        })
+        
+
+
+        app.get('/transactions', (req, res)=>{
+
+            pool.query("SELECT * FROM transactions", (error, result, row)=>{
+                if(error){
+                    res.send({...responseObj, success:false, message:"Error Fetching Transactions", data:error})
+                  
+                }else{
+                    res.send({...responseObj, success:true, message:"Transactions Fetched Successfully", data:result})
+        
+                }
+            })
+        
+        })
+        
 
 
 
