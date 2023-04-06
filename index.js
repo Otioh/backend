@@ -244,7 +244,13 @@ app.get('/users/:email', (req, res)=>{
         if(error){
             res.send({...responseObj, message:"Error Retrieving Users"})
         }else{
-            res.send({...responseObj, data:result, success:true, message:"Users Retrieved Successfully"})
+            if(result.length>0){
+                res.send({ ...responseObj, data: result, success: true, message: "Users Retrieved Successfully" })
+
+            }else{
+                res.send({ ...responseObj, data: result, success: false, message: "Users Not Found" })
+
+            }
         }
 
     })
@@ -391,7 +397,59 @@ app.post('/mycourses', (req, res)=>{
         }
     })
     })
+
     
+
+
+
+app.post('/schedules', (req, res) => {
+    const {  course, time_in, time_out, venue, day, user,  campus, department } = req.body;
+    pool.query("SELECT * FROM schedule WHERE course='" + course + "' && day='" + day + "' && department='" + department + "' && campus='" + campus + "'", (error, result, row) => {
+        if (error) {
+            res.send({ ...responseObj, success: false, message: "Error Validating Course", data: error })
+        } else {
+            if (result.length > 0) {
+                res.send({ ...responseObj, success: false, message: "Course [" + course + "] Already Exist for " + department+' department on '+day, data: error })
+            } else {
+
+                pool.query("INSERT INTO `schedule` (`id`, `course`, `time_in`, `time_out`, `venue`, `day`, `user`, `wrong`, `correct`, `campus`, `department`) VALUES (NULL, '"+course+"', '"+time_in+"', '"+time_out+"', '"+venue+"', '"+day+"', '"+user+"', 0, 0, '"+campus+"', '"+department+"');", (error, result, row) => {
+                    if (error) {
+                        res.send({ ...responseObj, success: false, message: "Error Adding Schedule", data: error })
+                    } else {
+                        res.send({ ...responseObj, success: true, message: "Schedule Added Successfully" })
+
+                    }
+                })
+            }
+        }
+    })
+})
+
+
+
+app.post('/schedules/:id', (req, res) => {
+    const { course, time_in, time_out, venue, day, user, campus, department } = req.body;
+    pool.query("SELECT * FROM schedule WHERE course='" + course + "' && day='" + day + "' && department='" + department + "' && campus='" + campus + "'", (error, result, row) => {
+        if (error) {
+            res.send({ ...responseObj, success: false, message: "Error Validating Course", data: error })
+        } else {
+            if (result.length > 0) {
+                res.send({ ...responseObj, success: false, message: "Course [" + course + "] Already Exist for " + department + ' on ' + day, data: error })
+            } else {
+
+                pool.query("INSERT INTO `schedule` (`id`, `course`, `time_in`, `time_out`, `venue`, `day`, `user`, `wrong`, `correct`, `campus`, `department`) VALUES (NULL, '" + course + "', '" + time_in + "', '" + time_out + "', '" + venue + "', '" + day + "', '" + user + "', 0, 0, '" + campus + "', '" + department + "');", (error, result, row) => {
+                    if (error) {
+                        res.send({ ...responseObj, success: false, message: "Error Adding Schedule", data: error })
+                    } else {
+                        res.send({ ...responseObj, success: true, message: "Schedule Added Successfully" })
+
+                    }
+                })
+            }
+        }
+    })
+})
+
 
 
 
@@ -413,6 +471,27 @@ app.get('/assignments/:campus', (req, res)=>{
 
 
 
+
+app.get('/schedules/:campus/:department', (req, res)=>{
+
+    pool.query("SELECT * FROM schedule WHERE campus='"+req.params.campus+"' && department='"+req.params.department+"'", (error, result, row)=>{
+        if(error){
+            res.send({...responseObj, success:false, message:"Error Fetching Schedules", data:error})
+          
+        }else{
+            res.send({ ...responseObj, success: true, message:"Schedules Fetched Successfully", data:result})
+
+        }
+    })
+
+})
+
+
+
+
+
+
+
 app.post('/assignments', (req, res)=>{
     const  {} =req.body;
                 pool.query("INSERT INTO `assignments` (`id`, `code`, `title`, `campus`, `department`, `level`, `user`) VALUES (NULL, '"+code+"', '"+title+"', '"+campus+"', '"+department+"', '"+level+"', '"+user+"');", (error, result, row)=>{
@@ -428,6 +507,10 @@ app.post('/assignments', (req, res)=>{
     
     app.post('/transactions', (req, res)=>{
         const  {transaction_id, item, description_sender, description_receiver, sender, receiver, amount, status} =req.body;
+
+        if(amount>0){
+
+        
                     pool.query("INSERT INTO `transactions` (`id`, `transaction_id`, `item`, `description_sender`, `description_receiver`, `sender`, `receiver`, `amount`, `date`, `status`) VALUES (NULL, '"+transaction_id+"', '"+item+"', '"+description_sender+"', '"+description_receiver+"', '"+sender+"', '"+receiver+"', "+amount+", '"+new Date()+"', '"+status+"');", (error, result, row)=>{
                         if(error){
                             res.send({...responseObj, success:false, message:"Error Posting Transaction", data:error})
@@ -436,11 +519,15 @@ app.post('/assignments', (req, res)=>{
                     
                         }
         })
+    }else{
+            res.send({ ...responseObj, success: false, message: "Amount most be greater than 0.00", data: [] }) 
+    }
         })
     
 
 
         app.get('/transactions/:user', (req, res)=>{
+           
 
             pool.query("SELECT * FROM transactions WHERE sender='"+req.params.user+"' OR receiver='"+req.params.user+"'", (error, result, row)=>{
                 if(error){
@@ -453,7 +540,95 @@ app.post('/assignments', (req, res)=>{
             })
         
         })
+
+
+app.post('/transactions/validate', (req, res) => {
+    const { sender, amount, password } = req.body;
+    pool.query("SELECT * FROM users WHERE email='" + sender + "'", (error, result, row) => {
+        if (error) {
+            res.send({ ...responseObj, message: "Error Retrieving Users" })
+        } else {
+            if (result.length > 0) {
+if(amount>parseFloat(result[0].coins)){
+    res.send({ ...responseObj, data: result, success: false, message: "Amount greater than your current balance" })
+
+}else{
+
+if(password===result[0].password){
+    res.send({ ...responseObj, data: result, success: true, message: "Transaction is Possible" })
+
+}else{
+    res.send({ ...responseObj, data: result, success: false, message: "Incorrect Password" })
+
+}
+
+}
+
+
+             
+            } else {
+                res.send({ ...responseObj, data: result, success: false, message: "Users Not Found" })
+
+            }
+        }
+
+    })
+
+})
         
+
+
+app.post("/votes", (req, res) => {
+  const { subject, subject_id, type, user, campus, department, level } =
+    req.body;
+  pool.query(
+    "SELECT * FROM votes WHERE user='" +
+      user +
+      "' && subject_id='" +
+      subject_id +
+      "' && subject='" +
+      subject +
+      "'",
+    (error, result, row) => {
+      if (error) {
+        res.send({ ...responseObj, message: "Error Retrieving Votes" });
+      } else {
+        if (result.length > 0) {
+          res.send({
+            ...responseObj,
+            data: result,
+            success: false,
+            message: "You already voted this "+subject,
+          });
+        } else {
+          
+            pool.query(
+              "INSERT INTO `votes` (`id`, `subject`, `type`, `user`, `subject_id`, `campus`, `department`, `level`) VALUES (NULL, '"+subject+"', '"+type+"', '"+user+"', "+subject_id+", '"+campus+"', '"+department+"', '"+level+"');",
+              (error, result, row) => {
+                if(error){
+                    res.send({
+                      ...responseObj,
+                      data: result,
+                      success: false,
+                      message: "Error Posting Vote ",
+                    });
+                }else{
+                    res.send({
+                      ...responseObj,
+                      data: result,
+                      success: true,
+                      message: "Voted Successfully ",
+                    });
+                }
+              }
+            );
+        }
+      }
+    }
+  );
+});
+     
+
 
 
         app.get('/transactions', (req, res)=>{
@@ -469,6 +644,57 @@ app.post('/assignments', (req, res)=>{
             })
         
         })
+
+           app.get("/votes", (req, res) => {
+             pool.query("SELECT * FROM votes", (error, result, row) => {
+               if (error) {
+                 res.send({
+                   ...responseObj,
+                   success: false,
+                   message: "Error Fetching Votes",
+                   data: error,
+                 });
+               } else {
+                 res.send({
+                   ...responseObj,
+                   success: true,
+                   message: "Votes Fetched Successfully",
+                   data: result,
+                 });
+               }
+             });
+           });
+
+                      app.get("/votes/:campus/:department/:level/:subject", (req, res) => {
+                        pool.query(
+                          "SELECT * FROM votes WHERE subject='" +
+                            req.params.subject +
+                            "' && campus='" +
+                            req.params.campus +
+                            "' && department='" +
+                            req.params.department +
+                            "'&& level='" +
+                            req.params.level +
+                            "'",
+                          (error, result, row) => {
+                            if (error) {
+                              res.send({
+                                ...responseObj,
+                                success: false,
+                                message: "Error Fetching Votes",
+                                data: error,
+                              });
+                            } else {
+                              res.send({
+                                ...responseObj,
+                                success: true,
+                                message: "Votes Fetched Successfully",
+                                data: result,
+                              });
+                            }
+                          }
+                        );
+                      });
         
 
 
