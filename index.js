@@ -403,7 +403,7 @@ app.post('/mycourses', (req, res)=>{
 
 
 app.post('/schedules', (req, res) => {
-    const {  course, time_in, time_out, venue, day, user,  campus, department } = req.body;
+    const {  course, time_in, time_out, venue, day, user,  campus, department, level } = req.body;
     pool.query("SELECT * FROM schedule WHERE course='" + course + "' && day='" + day + "' && department='" + department + "' && campus='" + campus + "'", (error, result, row) => {
         if (error) {
             res.send({ ...responseObj, success: false, message: "Error Validating Course", data: error })
@@ -412,7 +412,7 @@ app.post('/schedules', (req, res) => {
                 res.send({ ...responseObj, success: false, message: "Course [" + course + "] Already Exist for " + department+' department on '+day, data: error })
             } else {
 
-                pool.query("INSERT INTO `schedule` (`id`, `course`, `time_in`, `time_out`, `venue`, `day`, `user`, `wrong`, `correct`, `campus`, `department`) VALUES (NULL, '"+course+"', '"+time_in+"', '"+time_out+"', '"+venue+"', '"+day+"', '"+user+"', 0, 0, '"+campus+"', '"+department+"');", (error, result, row) => {
+                pool.query("INSERT INTO `schedule` (`id`, `course`, `time_in`, `time_out`, `venue`, `day`, `user`, `wrong`, `correct`, `campus`, `department`, `level`) VALUES (NULL, '"+course+"', '"+time_in+"', '"+time_out+"', '"+venue+"', '"+day+"', '"+user+"', 0, 0, '"+campus+"', '"+department+"', '"+level+"');", (error, result, row) => {
                     if (error) {
                         res.send({ ...responseObj, success: false, message: "Error Adding Schedule", data: error })
                     } else {
@@ -472,17 +472,34 @@ app.get('/assignments/:campus', (req, res)=>{
 
 
 
-app.get('/schedules/:campus/:department', (req, res)=>{
+app.get('/schedules/:campus/:department/:level', (req, res)=>{
 
-    pool.query("SELECT * FROM schedule WHERE campus='"+req.params.campus+"' && department='"+req.params.department+"'", (error, result, row)=>{
-        if(error){
-            res.send({...responseObj, success:false, message:"Error Fetching Schedules", data:error})
-          
-        }else{
-            res.send({ ...responseObj, success: true, message:"Schedules Fetched Successfully", data:result})
-
+    pool.query(
+      "SELECT * FROM schedule WHERE campus='" +
+        req.params.campus +
+        "' && department='" +
+        req.params.department +
+        "'  && level='" +
+        req.params.level +
+        "'",
+      (error, result, row) => {
+        if (error) {
+          res.send({
+            ...responseObj,
+            success: false,
+            message: "Error Fetching Schedules",
+            data: error,
+          });
+        } else {
+          res.send({
+            ...responseObj,
+            success: true,
+            message: "Schedules Fetched Successfully",
+            data: result,
+          });
         }
-    })
+      }
+    );
 
 })
 
@@ -613,6 +630,46 @@ app.post("/votes", (req, res) => {
                       message: "Error Posting Vote ",
                     });
                 }else{
+
+                    
+
+
+                    pool.query("SELECT * FROM schedule WHERE id='"+subject_id+"'", (error, resul, row) => {
+                        let newWrong=resul[0].wrong+1;
+                          let newcorrect = resul[0].correct + 1;
+                        pool.query(
+                          type === "correct"
+                            ? "UPDATE schedule SET correct=" +
+                                newcorrect +
+                                "  WHERE id='" +
+                                subject_id +
+                                "'"
+                            : "UPDATE schedule SET wrong=" +
+                                newWrong +
+                                "  WHERE id='" +
+                                subject_id +
+                                "'",
+                          (error, res, row) => {
+if(newWrong-newcorrect>2){
+pool.query(
+  "DELETE FROM schedule WHERE `schedule`.`id` = "+subject_id,
+  (error, result, row) => {
+    if (error) {
+    }
+    pool.query(
+      "DELETE FROM votes WHERE subject_id='" + subject_id + "'",
+      (error, result, row) => {
+        if (error) {
+        }
+      }
+    );
+  }
+);
+}
+
+                          }
+                        );
+                    });
                     res.send({
                       ...responseObj,
                       data: result,
@@ -665,6 +722,27 @@ app.post("/votes", (req, res) => {
              });
            });
 
+
+                app.get("/votes/user/:user", (req, res) => {
+                  pool.query("SELECT subject_id, type FROM votes WHERE user='"+req.params.user+"'", (error, result, row) => {
+                    if (error) {
+                      res.send({
+                        ...responseObj,
+                        success: false,
+                        message: "Error Fetching Votes",
+                        data: error,
+                      });
+                    } else {
+                      res.send({
+                        ...responseObj,
+                        success: true,
+                        message: "Votes Fetched Successfully",
+                        data: result,
+                      });
+                    }
+                  });
+                });
+
                       app.get("/votes/:campus/:department/:level/:subject", (req, res) => {
                         pool.query(
                           "SELECT * FROM votes WHERE subject='" +
@@ -695,8 +773,44 @@ app.post("/votes", (req, res) => {
                           }
                         );
                       });
-        
 
+
+
+                       app.get(
+                         "/votes/:campus/:department/:level/:subject/:type",
+                         (req, res) => {
+                           pool.query(
+                             "SELECT * FROM votes WHERE type='"+req.params.type+"' && subject='" +
+                               req.params.subject +
+                               "' && campus='" +
+                               req.params.campus +
+                               "' && department='" +
+                               req.params.department +
+                               "'&& level='" +
+                               req.params.level +
+                               "'",
+                             (error, result, row) => {
+                               if (error) {
+                                 res.send({
+                                   ...responseObj,
+                                   success: false,
+                                   message: "Error Fetching Votes",
+                                   data: error,
+                                 });
+                               } else {
+                                 res.send({
+                                   ...responseObj,
+                                   success: true,
+                                   message: "Votes Fetched Successfully",
+                                   data: result,
+                                 });
+                               }
+                             }
+                           );
+                         }
+                       );
+
+                     
 
 
 
