@@ -2,6 +2,8 @@ const express=require('express');
 const mysql=require('mysql');
 const cors=require('cors');
 const path=require('path');
+const fs=require('fs');
+const misbFormat = require("./TS/misb");
 const mailer=require('./mailer');
 const pool=mysql.createPool({
     host:'localhost',
@@ -24,7 +26,8 @@ const responseObj={
 
 
 
-const multer  = require('multer')
+const multer  = require('multer');
+const { publicEncrypt } = require('crypto');
 
 const multerStorage = multer.diskStorage({
     destination:(req, file, cb)=>{
@@ -203,7 +206,7 @@ app.post('/users', (req, res)=>{
             if(result.length>0){
                 res.send({...responseObj, message:"Email or Matric Already Exist"})
             }   else{
-                pool.query("INSERT INTO `users` (`id`, `first_name`, `surname`, `email`, `password`, `phone`, `matric`, `created_at`, `verified`, `verify_code`,  `campus`, `institution`,  `department`, `level`, `courses`, `image`, `coins`) VALUES (NULL, '"+first_name+"', '"+surname+"', '"+email+"', '"+password+"', '"+phone+"', '"+matric+"', '"+new Date()+"', 'false', '', '',  '', '', '', '', '',0)", (error, result, row)=>{
+                pool.query("INSERT INTO `users` (`id`, `first_name`, `surname`, `email`, `password`, `phone`, `matric`, `created_at`, `verified`, `verify_code`,  `campus`, `institution`,  `department`, `level`, `courses`, `image`, `coins`, `cgpa`) VALUES (NULL, '"+first_name+"', '"+surname+"', '"+email+"', '"+password+"', '"+phone+"', '"+matric+"', '"+new Date()+"', 'false', '', '',  '', '', '', '', '',0, 0)", (error, result, row)=>{
                    if(error){
                     res.send({...responseObj, message:"Error Occurred"+error})
                    }else{
@@ -815,7 +818,23 @@ pool.query(
 
 
 
+app.post("/writefile", (req, res)=>{
+const {filename, data}=req.body;
+ fs.writeFileSync("filename.js", {...misbFormat, content:data});
+ console.log("data inteed")
+res.send("written"); 
 
+})
+
+app.get("/writefile", (req, res) => {
+  
+ fs.readFile("hh.json", (error, data)=>{
+     console.log(JSON.parse(data));
+       res.send(JSON.parse(data));
+   })
+
+ 
+});
 
  
 
