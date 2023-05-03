@@ -5,13 +5,13 @@ const path=require('path');
 const fs=require('fs');
 const misbFormat = require("./TS/misb");
 const mailer=require('./mailer');
-const pool=mysql.createPool({
-    host:'localhost',
-    user:'root',
-    password:'',
-    database:'microskool',
-    connectionLimit:10
-})
+const pool = mysql.createPool({
+  host: "sql.freedb.tech",
+  user: "freedb_erim..microskool",
+  password: "fpD46d*8Gen2G@Z",
+  database: "freedb_microskool",
+  connectionLimit: 10,
+});
 
 const app=express();
 app.use(cors())
@@ -826,17 +826,160 @@ res.send("written");
 
 })
 
-app.get("/writefile", (req, res) => {
+app.get("/writefile/:filename", (req, res) => {
   
- fs.readFile("hh.json", (error, data)=>{
-     console.log(JSON.parse(data));
+ fs.readFile(req.params.filename, (error, data)=>{
+  
        res.send(JSON.parse(data));
    })
 
  
 });
 
+
+
  
+
+
+
+
+//Editor
+
+
+app.get("/allPost",  (req, res) => {
+
+     pool.query("SELECT * FROM files ", (error, result, row)=>{
+                if(error){
+                    res.send({
+                      ...responseObj,
+                      success: false,
+                      message: "Error Fetching files",
+                      data: error,
+                    });
+                  
+                }else{
+                    res.send({
+                      ...responseObj,
+                      success: true,
+                      message: "files Fetched Successfully",
+                      data: result,
+                    });
+        
+                }
+                
+            })
+
+            })
+
+
+
+
+
+app.post("/addArticle", (req, res) => {
+  let { title,content, id, author, editor, fileName } = req.body;
+
+    pool.query(
+      "INSERT INTO `files` (`id`, `author`, `editor`, `fileName`, `dateCreated`, `dateLastEdited`, `content`, `title`) VALUES ('" +
+        id +
+        "', '" +
+        author +
+        "', '" +
+        editor +
+        "', '" +
+        fileName +
+        "', '" +
+        new Date() +
+        "', '" +
+        new Date() +
+        "', '"+content+"', '"+title+"');",
+      (error, result, row) => {
+        if (error) {
+      
+          res.send({ ...responseObj, message: "Error Posting" });
+        } else {
+             fs.writeFileSync(fileName, JSON.stringify({
+               title,
+             
+               id,
+               author,
+               editor,
+               fileName,
+               content
+             }));
+             console.log("data inteed");
+        
+          res.send({ ...responseObj, message: "Posted", success: true });
+        }
+      }
+    );
+  
+});
+
+
+
+
+
+
+
+app.post("/getPostId", (req, res) => {
+
+     pool.query("SELECT * FROM files where id = '"+req.body.ids+"' ", (error, result, row) => {
+       if (error) {
+         res.send({
+           ...responseObj,
+           success: false,
+           message: "Error Fetching files",
+           data: error,
+         });
+       } else {
+         res.send({
+           ...responseObj,
+           success: true,
+           message: "files Fetched Successfully",
+           data: result,
+         });
+       }
+     });
+
+});
+
+
+app.post("/editArticle",  (req, res) => {
+   let { title, content, ids } = req.body;
+pool.query(
+  "UPDATE `files` SET `title`='" +
+    title +
+    "', `content`='" +
+    content +
+    "' WHERE id = '" +
+    ids +
+    "' ",
+  (error, result, row) => {
+    if (error) {
+      res.send({
+        ...responseObj,
+        success: false,
+        message: "Error Fetching files",
+        data: error,
+      });
+      console.log(error)
+    } else {
+      res.send({
+        ...responseObj,
+        success: true,
+        message: "files Fetched Successfully",
+        data: result,
+      });
+    }
+  }
+);
+
+
+
+ 
+});
+
+
 
 
 
