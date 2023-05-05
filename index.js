@@ -5,11 +5,19 @@ const path=require('path');
 const fs=require('fs');
 const misbFormat = require("./TS/misb");
 const mailer=require('./mailer');
+// const pool = mysql.createPool({
+//   host: "sql.freedb.tech",
+//   user: "freedb_erim..microskool",
+//   password: "fpD46d*8Gen2G@Z",
+//   database: "freedb_microskool",
+//   connectionLimit: 10,
+// });
+
 const pool = mysql.createPool({
-  host: "sql.freedb.tech",
-  user: "freedb_erim..microskool",
-  password: "fpD46d*8Gen2G@Z",
-  database: "freedb_microskool",
+  host: "localhost",
+  user: "root",
+  password: "",
+  database: "microskool",
   connectionLimit: 10,
 });
 
@@ -46,8 +54,25 @@ pool.query("UPDATE users SET image='http://192.168.43.31:5000/assets/"+saveName+
     }
 })
 
+
+
+
+const multerTempStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'temp')
+  },
+  filename: (req, file, cb) => {
+   
+    cb(null, req.params.filename);
+
+  }
+})
+
 const upload=multer({
     storage:multerStorage  
+})
+const getTempFile = multer({
+  storage: multerTempStorage
 })
 
 app.use('/assets', express.static('assets'))
@@ -64,6 +89,28 @@ app.post('/photos/upload', upload.array('photos', 12), function (req, res, next)
   // req.files is array of `photos` files
   // req.body will contain the text fields, if there were any
 })
+
+
+app.post('/file/:filename', getTempFile.array('file', 12), function (req, res, next) {
+  // req.files is array of `photos` files
+  // req.body will contain the text fields, if there were any
+ setTimeout(() => {
+  fs.readFile('temp/'+req.params.filename,(err, data)=>{
+    res.send(JSON.parse(data))
+  })
+   fs.unlink('temp/' + req.params.filename, (err)=>{
+    
+   })
+ }, 3000);
+ 
+})
+
+
+
+
+
+
+
 
 const cpUpload = upload.fields([{ name: 'avatar', maxCount: 1 }, { name: 'gallery', maxCount: 8 }])
 app.post('/cool-profile', cpUpload, function (req, res, next) {
@@ -828,10 +875,10 @@ res.send("written");
 
 app.get("/writefile/:filename", (req, res) => {
   
- fs.readFile(req.params.filename, (error, data)=>{
+ let file=fs.readFileSync(req.params.filename)
   
-       res.send(JSON.parse(data));
-   })
+       res.download(req.params.filename);
+  
 
  
 });
@@ -846,28 +893,30 @@ app.get("/writefile/:filename", (req, res) => {
 //Editor
 
 
-app.get("/allPost",  (req, res) => {
+app.get("/allPost/:email",  (req, res) => {
 
-     pool.query("SELECT * FROM files ", (error, result, row)=>{
-                if(error){
-                    res.send({
-                      ...responseObj,
-                      success: false,
-                      message: "Error Fetching files",
-                      data: error,
-                    });
-                  
-                }else{
-                    res.send({
-                      ...responseObj,
-                      success: true,
-                      message: "files Fetched Successfully",
-                      data: result,
-                    });
-        
-                }
-                
-            })
+     pool.query(
+       "SELECT * FROM files WHERE editor='" +
+         req.params.email +
+         "'",
+       (error, result, row) => {
+         if (error) {
+           res.send({
+             ...responseObj,
+             success: false,
+             message: "Error Fetching files",
+             data: error,
+           });
+         } else {
+           res.send({
+             ...responseObj,
+             success: true,
+             message: "files Fetched Successfully",
+             data: result,
+           });
+         }
+       }
+     );
 
             })
 
@@ -876,10 +925,10 @@ app.get("/allPost",  (req, res) => {
 
 
 app.post("/addArticle", (req, res) => {
-  let { title,content, id, author, editor, fileName } = req.body;
+  let { title, content, id, author, editor, editorname, fileName } = req.body;
 
     pool.query(
-      "INSERT INTO `files` (`id`, `author`, `editor`, `fileName`, `dateCreated`, `dateLastEdited`, `content`, `title`) VALUES ('" +
+      "INSERT INTO `files` (`id`, `author`, `editor`, `fileName`, `dateCreated`, `dateLastEdited`, `content`, `title`, `editorname`) VALUES ('" +
         id +
         "', '" +
         author +
@@ -891,22 +940,13 @@ app.post("/addArticle", (req, res) => {
         new Date() +
         "', '" +
         new Date() +
-        "', '"+content+"', '"+title+"');",
+      "', '" + content + "', '" + title + "', '" + editorname +"');",
       (error, result, row) => {
         if (error) {
       
           res.send({ ...responseObj, message: "Error Posting" });
         } else {
-             fs.writeFileSync(fileName, JSON.stringify({
-               title,
-             
-               id,
-               author,
-               editor,
-               fileName,
-               content
-             }));
-             console.log("data inteed");
+    
         
           res.send({ ...responseObj, message: "Posted", success: true });
         }
@@ -944,13 +984,47 @@ app.post("/getPostId", (req, res) => {
 });
 
 
+app.get("/deletePost/:id", (req, res)=>{
+  
+   pool.query(
+     "DELETE FROM files where id = '" + req.params.id + "' ",
+     (error, result, row) => {
+       if (error) {
+         res.send({
+           ...responseObj,
+           success: false,
+           message: "Error Fetching files",
+           data: error,
+         });
+       } else {
+         res.send({
+           ...responseObj,
+           success: true,
+           message: "files Deleted Successfully",
+           data: result,
+         });
+       }
+     }
+   );
+})
+
+
+
+
+
+
+
 app.post("/editArticle",  (req, res) => {
-   let { title, content, ids } = req.body;
+   let { title, content, ids, fileName } = req.body;
 pool.query(
   "UPDATE `files` SET `title`='" +
     title +
     "', `content`='" +
-    content +
+    content +  
+    "' , `fileName`='" +
+    fileName +
+    "' , `dateLastEdited`='" +
+    new Date() +
     "' WHERE id = '" +
     ids +
     "' ",
@@ -962,7 +1036,7 @@ pool.query(
         message: "Error Fetching files",
         data: error,
       });
-      console.log(error)
+      console.log(error);
     } else {
       res.send({
         ...responseObj,
@@ -974,10 +1048,99 @@ pool.query(
   }
 );
 
-
-
  
 });
+
+
+
+
+
+
+
+
+//File Reading/Download
+app.get("/download/:fileId", (req, res)=>{
+
+   pool.query(
+     "SELECT * FROM files where id = '" + req.params.fileId + "' ",
+     (error, result, row) => {
+       if (error) {
+         res.send({
+           ...responseObj,
+           success: false,
+           message: "Error Fetching files",
+           data: error,
+         });
+       } else {
+
+if(result.length>0){
+       fs.writeFileSync(
+         result[0].fileName,
+         JSON.stringify(result[0])
+       ); 
+       setTimeout(() => {
+        res.download(result[0].fileName);
+       }, 2000);
+   
+
+
+}else{
+  res.send({
+    ...responseObj,
+    success: false,
+    message: "The file does not exist",
+    data: error,
+  });
+}
+       }
+     }
+   ); 
+})
+
+
+
+app.post("/readFile", (req, res)=>{
+const {file}=req.body;
+
+console.log(file)
+
+
+})
+
+
+
+
+app.post('/updatecoins', (req, res)=>{
+  const {email, coins, type}=req.body;
+  pool.query("SELECT * FROM users where email = '" + email + "' ",
+    (error, result, row) => {
+      if (error) {
+        res.send({
+          ...responseObj,
+          success: false,
+          message: "Error Fetching users",
+          data: error,
+        });
+      }else{
+
+let bal =0;
+if(type==="credit"){
+  bal = parseFloat(result[0].coins) + parseFloat(coins);
+}else{
+  bal =parseFloat(result[0].coins) - parseFloat(coins);
+}
+
+pool.query("UPDATE users set coins="+bal+" WHERE email='"+email+"'", (err, res, row)=>{
+
+})
+
+
+      }
+    })
+      
+  
+  
+})
 
 
 
