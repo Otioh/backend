@@ -37,6 +37,34 @@ const responseObj={
 const multer  = require('multer');
 const { publicEncrypt } = require('crypto');
 
+
+const multerStorageDoc = multer.diskStorage({
+  destination: (req, file, cb) => {
+  
+    cb(null, 'Documents' )
+  },
+  filename: (req, file, cb) => {
+
+    cb(null, file.originalname);
+    fs.mkdir('Documents/User'+req.params.id, { recursive: true }, (err) => {
+
+    })
+
+    setTimeout(() => {
+      fs.copyFileSync('./Documents/' + file.originalname, 'Documents/User' + req.params.id + "/" + file.originalname )
+      fs.unlink('./Documents/' + file.originalname, (err)=>{
+
+      })
+    }, 3000);
+
+ 
+
+  }
+})
+
+
+
+
 const multerStorage = multer.diskStorage({
     destination:(req, file, cb)=>{
 cb(null, 'assets')
@@ -67,6 +95,9 @@ const multerTempStorage = multer.diskStorage({
 
   }
 })
+const uploadDoc=multer({
+  storage: multerStorageDoc
+})
 
 const upload=multer({
     storage:multerStorage  
@@ -94,16 +125,42 @@ app.post('/photos/upload', upload.array('photos', 12), function (req, res, next)
 app.post('/file/:filename', getTempFile.array('file', 12), function (req, res, next) {
   // req.files is array of `photos` files
   // req.body will contain the text fields, if there were any
- setTimeout(() => {
-  fs.readFile('temp/'+req.params.filename,(err, data)=>{
-    res.send(JSON.parse(data))
-  })
-   fs.unlink('temp/' + req.params.filename, (err)=>{
-    
-   })
- }, 3000);
+
+  if (req.params.filename.split('.')[1]==="misb"){
+    setTimeout(() => {
+
+
+      fs.readFile('temp/' + req.params.filename, (err, data) => {
+ 
+        if (JSON.parse(data).content){
+          res.send({ ...responseObj, data: JSON.parse(data), success: true, message: "Document Valid" })
+ 
+        }else{
+          res.send({ ...responseObj, data: data, success: false, message: "Corrupt File" })
+
+        }
+     
+      
+      })
+      fs.unlink('temp/' + req.params.filename, (err) => {
+
+      })
+
+
+
+
+    }, 3000);
+
+  }else{
+    res.send({ ...responseObj, success: false, message: "Wrong File Type" })
+
+  }
  
 })
+
+
+
+
 
 
 
@@ -557,18 +614,24 @@ app.get('/schedules/:campus/:department/:level', (req, res)=>{
 
 
 
+app.post('/postFile/:id', uploadDoc.single('file'), (req, res) => {
 
+})
 
 app.post('/assignments', (req, res)=>{
-    const  {} =req.body;
-                pool.query("INSERT INTO `assignments` (`id`, `code`, `title`, `campus`, `department`, `level`, `user`) VALUES (NULL, '"+code+"', '"+title+"', '"+campus+"', '"+department+"', '"+level+"', '"+user+"');", (error, result, row)=>{
+  
+
+
+    const {  course, question,  deadline, lecturer,  campus,  filestat, user, filename } =req.body;
+    pool.query("INSERT INTO `assignments` (`id`, `course`, `question`,`date`, `deadline`, `lecturer`, `file`, `campus`, `downloads`, `warnings`,  `filestat`, `user`) VALUES (NULL, '" + course + "', '" + question + "', '" + new Date() + "', '" + deadline + "', '" + lecturer + "', '" + filename +"', '"+campus+"', 0, 0,  '"+filestat+"', '"+user+"');", (error, result, row)=>{
                     if(error){
-                        res.send({...responseObj, success:false, message:"Error Creating Course", data:error})
+                      res.send({ ...responseObj, success: false, message:"Error Posting Assignment", data:error})
                     }else{
-                        res.send({...responseObj, success:true, message:"Courses Created Successfully"})
+                        res.send({...responseObj, success:true, message:"Assignment Posted Successfully"})
                 
                     }
     })
+  
     })
 
     
@@ -1005,12 +1068,16 @@ app.get("/deletePost/:id", (req, res)=>{
          });
        }
      }
-   );
+   ); 
 })
 
 
 
-
+app.get('/downloadFile/:dir', (req, res)=>{
+  const fileArr = req.params.dir.split("*")
+  let file="User"+fileArr[0]+"/"+fileArr[1]
+  res.download('./Documents/'+file)
+})
 
 
 
@@ -1125,9 +1192,9 @@ app.post('/updatecoins', (req, res)=>{
 
 let bal =0;
 if(type==="credit"){
-  bal = parseFloat(result[0].coins) + parseFloat(coins);
+  bal = parseFloat(result[0]?.coins) + parseFloat(coins);
 }else{
-  bal =parseFloat(result[0].coins) - parseFloat(coins);
+  bal =parseFloat(result[0]?.coins) - parseFloat(coins);
 }
 
 pool.query("UPDATE users set coins="+bal+" WHERE email='"+email+"'", (err, res, row)=>{
@@ -1141,6 +1208,39 @@ pool.query("UPDATE users set coins="+bal+" WHERE email='"+email+"'", (err, res, 
   
   
 })
+
+
+
+
+
+
+
+app.get('/assignments/user/:email', (req, res) => {
+
+  pool.query("SELECT * FROM assignments WHERE campus='" + req.params.campus + "'", (error, result, row) => {
+    if (error) {
+      res.send({ ...responseObj, success: false, message: "Error Fetching Assignments", data: error })
+
+    } else {
+      pool.query("SELECT * FROM mycourses WHERE user='" + req.params.email + "'", (error, resul, row) => {
+        if (error) {
+          res.send({ ...responseObj, success: false, message: "Error Fetching Courses", data: error })
+
+        } else {
+
+          res.send({ ...responseObj, success: true, message: "Assignments Fetched Successfully for " + req.params.email, data: resul })
+
+
+        }
+      })
+
+
+
+    }
+  })
+
+})
+
 
 
 
