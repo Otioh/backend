@@ -6,21 +6,21 @@ const fs=require('fs');
 const misbFormat = require("./TS/misb");
 const mailer=require('./mailer');
 
-// const pool = mysql.createPool({
-//   host: "sql.freedb.tech",
-//   user: "freedb_erim..microskool",
-//   password: "fpD46d*8Gen2G@Z",
-//   database: "freedb_microskool",
-//   connectionLimit: 10,
-// });
-
 const pool = mysql.createPool({
-  host: "localhost",
-  user: "root",
-  password: "",
-  database: "microskool",
+  host: "sql.freedb.tech",
+  user: "freedb_erim..microskool",
+  password: "fpD46d*8Gen2G@Z",
+  database: "freedb_microskool",
   connectionLimit: 10,
 });
+
+// const pool = mysql.createPool({
+//   host: "localhost",
+//   user: "root",
+//   password: "",
+//   database: "microskool",
+//   connectionLimit: 10,
+// });
 
 const app=express();
 app.use(cors())
