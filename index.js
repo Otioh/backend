@@ -5,6 +5,7 @@ const path=require('path');
 const fs=require('fs');
 const misbFormat = require("./TS/misb");
 const mailer=require('./mailer');
+
 // const pool = mysql.createPool({
 //   host: "sql.freedb.tech",
 //   user: "freedb_erim..microskool",
@@ -129,7 +130,7 @@ app.post('/file/:filename', getTempFile.array('file', 12), function (req, res, n
   if (req.params.filename.split('.')[1]==="misb"){
     setTimeout(() => {
 
-
+ 
       fs.readFile('temp/' + req.params.filename, (err, data) => {
  
         if (JSON.parse(data).content){
@@ -184,7 +185,31 @@ app.post('/cool-profile', cpUpload, function (req, res, next) {
 
 
 
+app.get('/lectures', (req, res)=>{
+  pool.query("SELECT * FROM lectures", (error, result, row) => {
+    if (error) {
+      res.send({ ...responseObj, message: "Error Retrieving Lectures" })
+    } else {
+      res.send({ ...responseObj, data: result, success: true, message: "Lectures Retrieved Successfully" })
+    }
 
+  })
+
+
+})
+
+app.get('/lectures/:id', (req, res) => {
+  pool.query("SELECT * FROM lectures WHERE lid='"+req.params.id+"'", (error, result, row) => {
+    if (error) {
+      res.send({ ...responseObj, message: "Error Retrieving Lecture" })
+    } else {
+      res.send({ ...responseObj, data: result[0], success: true, message: "Lecture Retrieved Successfully" })
+    }
+
+  })
+
+
+})
 
 
 
@@ -800,6 +825,61 @@ pool.query(
      
 
 
+app.post('/paybook', (req, res)=>{
+  const {  sender, receiver, amount } = req.body;
+
+let RECEIVER;
+let SENDER;
+  const percent = (amount * 70) / 100;
+  pool.query("SELECT * FROM users WHERE email='" + sender + "'", (error, result, row)=>{
+ 
+    SENDER=result[0];
+  })
+
+  pool.query("SELECT * FROM users WHERE email='" + receiver + "'", (error, result, row) => {
+    RECEIVER = result[0];
+
+    const senderBalance = SENDER?.coins - amount;
+   
+    const receiverBalance = percent + RECEIVER?.coins;
+
+
+    pool.query("UPDATE users SET coins=" + receiverBalance + " WHERE email='" + receiver + "'", (error, result, row) => {
+
+    })
+
+
+    pool.query("UPDATE users SET coins=" + senderBalance + " WHERE email='" + sender + "'", (error, result, row) => {
+
+    })
+  })
+
+
+
+
+
+  pool.query("INSERT INTO `transactions` (`id`, `transaction_id`, `item`, `description_sender`, `description_receiver`, `sender`, `receiver`, `amount`, `date`, `status`) VALUES (NULL, '" + "T255" + Math.random() * 2344354 + "', 'Material', 'Payment you made for a Microskool Document(MiSB)', 'Charge for (MiSB) Document', '" + sender + "', 'Microskool', " + amount + ", '" + new Date() + "', 'Approved');", (error, result, row) => {
+      
+    })
+
+
+  pool.query("INSERT INTO `transactions` (`id`, `transaction_id`, `item`, `description_sender`, `description_receiver`, `sender`, `receiver`, `amount`, `date`, `status`) VALUES (NULL, '" + "T255" + Math.random() * 2344354 + "', 'Material', 'Remittance for a Microskool Document(MiSB)', 'Remittance for a Microskool Document(MiSB)', 'Microskool', '" + receiver + "', " + percent + ", '" + new Date() + "', 'Approved');", (error, result, row) => {
+if(!error){
+  res.send({ ...responseObj, success: true, message: "Purchase Completed" })
+}
+  })
+
+
+
+
+
+
+
+})
+
+
+
+
 
         app.get('/transactions', (req, res)=>{
 
@@ -1011,14 +1091,18 @@ app.post("/addArticle", (req, res) => {
         } else {
     
         
-          res.send({ ...responseObj, message: "Posted", success: true });
+          res.send({ ...responseObj, message: "New File Created", success: true });
         }
       }
     );
   
 });
 
-
+app.get('/corscheck', (req, res)=>{
+  
+  fetch('https://app.googptai.com/storage/pexels/eating-healthy.mp4').then((res)=>res.blob()).then((blob=>console.log(blob)))
+  res.send("Done")
+})
 
 
 
