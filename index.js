@@ -2,9 +2,20 @@ const express=require('express');
 const mysql=require('mysql');
 const cors=require('cors');
 const path=require('path');
+const { Configuration, OpenAIApi } =require('openai');
 const fs=require('fs');
 const misbFormat = require("./TS/misb");
 const mailer=require('./mailer');
+
+
+const configuration = new Configuration({
+  apiKey: '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',
+});
+const openai = new OpenAIApi(configuration);
+
+
+
+
 
 const pool = mysql.createPool({
   host: "sql.freedb.tech",
@@ -597,6 +608,27 @@ app.get('/assignments/:campus', (req, res)=>{
 
         }
     })
+
+})
+
+
+
+
+
+
+
+
+app.delete('/assignments/:id', (req, res) => {
+
+  pool.query("DELETE  FROM assignments WHERE id='" + req.params.id + "'", (error, result, row) => {
+    if (error) {
+      res.send({ ...responseObj, success: false, message: "Error Deleting Assignments", data: error })
+
+    } else {
+      res.send({ ...responseObj, success: true, message: "Assignments Deleted Successfully", data: result })
+
+    }
+  })
 
 })
 
@@ -1326,6 +1358,23 @@ app.get('/assignments/user/:email', (req, res) => {
 })
 
 
+
+
+
+
+//OpenAi
+
+
+
+app.get('/openai', async (req, res) => {
+
+  
+
+
+
+
+  res.send('Yes');
+})
 
 
 
