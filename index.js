@@ -1368,17 +1368,81 @@ app.get('/assignments/user/:email', (req, res) => {
 
 app.get('/openai', async (req, res) => {
 
+mailer()
+  res.send('Yes');
+})
+
+app.get('/reset/', (req, res) => {
+
+
+  res.send({ ...responseObj, success: false, message: "User not provided" })
+
+})  
+
+ 
+
+ 
+app.get('/reset/:email', (req, res)=>{ 
+
+  let code = Math.floor(Math.random() * 1000000);
+  pool.query("UPDATE users SET verify_code=" + code + " WHERE email='" + req.params.email + "'", (error, result, row) => {
+    if (error) { }else{
+    
+    }
+  })
+
+  pool.query("SELECT password from users WHERE email='"+req.params.email+"'", (err, result, row)=>{
+   if(result.length>0){
+
+     mailer({ recipients: req.params.email, subject: 'Reset Password - Microskool', message: 'Your current passord hint is:[' + result[0].password.substring(0, 1) + '********' + result[0].password.substring(result[0].password.length - 1) +'] (If you still cannot remember)  Use this code to confirm your request to reset your password: ' + code })
+     res.send({ ...responseObj, success: true, message: "Check your mail for Password Recovery instructions" })
+
+    }else{
+     res.send({ ...responseObj, success: false, message: "User not found, please create an account" })
+
+   }
+
+  })
   
 
+})
+
+app.post('/reset/', (req, res) => {
+const {email, currentPassword, code, newPassword}=req.body;
+if(email==="" || email===undefined || newPassword==="" || newPassword===undefined){
+  res.send({ ...responseObj, success: false, message: "Password and a user is required" })
+}else{
+  if (currentPassword === "" || currentPassword === undefined && code === "" || code === undefined) {
+    res.send({ ...responseObj, success: false, message: "You must provide current password or a confirmation code" })
+  } 
+  else{ 
+ 
+  
+    pool.query("SELECT * FROM users WHERE email='" + email + "' && password='" + currentPassword + "' OR verify_code='" + code +"'", (err, result, row)=>{
+      if(result.length>0){
+
+        
+            pool.query("UPDATE users SET password='"+newPassword+"' WHERE email='"+email+"' && password='"+currentPassword+"' OR verify_code='"+code+"'", (err, result, row)=>{
+              if(err){
+                res.send({ ...responseObj, success: false, message: "An error occurred, check your entry and try again: "+err })
+              }else{
+                res.send({ ...responseObj, success: true, message: "Password changed successfully" })
+              }
+            })
+      }else{
+        res.send({ ...responseObj, success: false, message: "Authentication Failed"  })
+
+      }
+    })
+
+  }
+}
 
 
 
-  res.send('Yes');
+
 })
 
 
 
-
-
-
-app.listen(5000, ()=>console.log("Listening on 5000"));
+app.listen(5000, ()=>console.log("Listening on 5000")); 
