@@ -88,7 +88,7 @@ cb(null, 'assets')
         let name=`${email?.split('@')[0]}--${Math.random(0,300)}`;
         let saveName=name+"."+ext;
 cb(null, `${name}.${ext}`)
-      pool.query("UPDATE users SET image='https://api-microskool.onrender.com/assets/"+saveName+"' WHERE email='"+email+"'", (error, result, row)=>{
+      pool.query("UPDATE users SET image='https://elegant-jacket-lamb.cyclic.app/assets/"+saveName+"' WHERE email='"+email+"'", (error, result, row)=>{
    
 })
     }
