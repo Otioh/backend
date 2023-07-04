@@ -1,36 +1,32 @@
-const nodemailer = require("nodemailer");
+const axios = require('axios');
 
-// async..await is not allowed in global scope, must use a wrapper
-async function mailer() {
-    // Generate test SMTP service account from ethereal.email
-    // Only needed if you don't have a real mail account for testing
-    let testAccount = await nodemailer.createTestAccount();
+ async function sendEmail(name, email, subject, message) {
+  const data = JSON.stringify({
+    "Messages": [{
+      "From": {"Email": "test@verifyme.com.ng", "Name": "Microskool"},
+      "To": [{"Email": email, "Name": name}],
+      "Subject": subject,
+      "TextPart": message
+    }]
+  });
 
-    // create reusable transporter object using the default SMTP transport
-    let transporter = nodemailer.createTransport({
-        host: "smtp.ethereal.email",
-        port: 587,
-        secure: false, // true for 465, false for other ports
-        auth: {
-            user: testAccount.user, // generated ethereal user
-            pass: testAccount.pass, // generated ethereal password
-        },
+  const config = {
+    method: 'post',
+    url: 'https://api.mailjet.com/v3.1/send',
+    data: data,
+    headers: {'Content-Type': 'application/json'},
+      auth: { username: 'e7aae8a7ad0541c339cb3bfb13ea71dc', password: '9d07094c891f0f47fd3e56b317f3a27c'},
+  };
+
+  return axios(config)
+    .then(function (response) {
+      console.log(JSON.stringify(response.data));
+    })
+    .catch(function (error) {
+      console.log(error);
     });
 
-    // send mail with defined transport object
-    let info = await transporter.sendMail({
-        from: '"Fred Foo 👻" <foo@example.com>', // sender address
-        to: "bryonerim@gmail.com, emmanuel.otioh@yahoo.com", // list of receivers
-        subject: "Hello ✔", // Subject line
-        text: "Hello world?", // plain text body
-        html: "<b>Hello world?</b>", // html body
-    });
-
-    console.log("Message sent: %s", info.messageId);
-    // Message sent: <b658f8ca-6296-ccf4-8306-87d57a0b4321@example.com>
-
-    // Preview only available when sending through an Ethereal account
-    console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
-    // Preview URL: https://ethereal.email/message/WaQKMgKddxQDoou...
 }
-mailer().catch(console.error);
+
+
+module.exports=sendEmail

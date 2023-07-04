@@ -5,7 +5,7 @@ const path=require('path');
 const { Configuration, OpenAIApi } =require('openai');
 const fs=require('fs');
 const misbFormat = require("./TS/misb");
-const mailer=require('./mailer');
+const sendEmail=require('./mailer');
 
 
 const configuration = new Configuration({
@@ -19,8 +19,8 @@ const openai = new OpenAIApi(configuration);
 
 const pool = mysql.createPool({
   host: "sql.freedb.tech",
-  user: "freedb_erim..microskool",
-  password: "fpD46d*8Gen2G@Z",
+  user: "freedb_erim.microskool",
+  password: "$NdY??wEy5RqANP",
   database: "freedb_microskool",
   connectionLimit: 10,
 });
@@ -88,7 +88,7 @@ cb(null, 'assets')
         let name=`${email?.split('@')[0]}--${Math.random(0,300)}`;
         let saveName=name+"."+ext;
 cb(null, `${name}.${ext}`)
-pool.query("UPDATE users SET image='http://192.168.43.31:5000/assets/"+saveName+"' WHERE email='"+email+"'", (error, result, row)=>{
+      pool.query("UPDATE users SET image='https://api-microskool.onrender.com/assets/"+saveName+"' WHERE email='"+email+"'", (error, result, row)=>{
    
 })
     }
@@ -196,8 +196,8 @@ app.post('/cool-profile', cpUpload, function (req, res, next) {
 
 
 
-app.get('/lectures', (req, res)=>{
-  pool.query("SELECT * FROM lectures", (error, result, row) => {
+app.get('/lectures/:campus', (req, res)=>{
+  pool.query("SELECT * FROM lectures WHERE campus='"+req.params.campus+"'", (error, result, row) => {
     if (error) {
       res.send({ ...responseObj, message: "Error Retrieving Lectures" })
     } else {
@@ -209,12 +209,90 @@ app.get('/lectures', (req, res)=>{
 
 })
 
-app.get('/lectures/:id', (req, res) => {
+app.get('/lectures/watch/:id', (req, res) => {
+
   pool.query("SELECT * FROM lectures WHERE lid='"+req.params.id+"'", (error, result, row) => {
     if (error) {
       res.send({ ...responseObj, message: "Error Retrieving Lecture" })
     } else {
-      res.send({ ...responseObj, data: result[0], success: true, message: "Lecture Retrieved Successfully" })
+      if(result.length>0){
+
+        
+
+
+
+
+
+        const videoPath = `./assets/videos/vid.mp4`;
+
+        const videoStat = fs.statSync(videoPath);
+
+        const fileSize = videoStat.size;
+
+        const videoRange = req.headers.range;
+
+        if (videoRange) {
+
+          const parts = videoRange.replace(/bytes=/, "").split("-");
+
+          const start = parseInt(parts[0], 10);
+
+          const end = parts[1]
+
+            ? parseInt(parts[1], 10)
+
+            : fileSize - 1;
+
+          const chunksize = (end - start) + 1;
+
+          const file = fs.createReadStream(videoPath, { start, end });
+
+          const header = {
+
+            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+
+            'Accept-Ranges': 'bytes',
+
+            'Content-Length': chunksize,
+
+            'Content-Type': 'video/mp4',
+
+          };
+
+          res.writeHead(206, header);
+
+          file.pipe(res);
+
+        } else {
+
+          const head = {
+
+            'Content-Length': fileSize,
+
+            'Content-Type': 'video/mp4',
+
+          };
+
+          res.writeHead(200, head);
+
+          fs.createReadStream(videoPath).pipe(res);
+
+        }
+
+
+
+
+    
+        
+     
+
+
+
+
+        
+      }else{
+        res.send({ ...responseObj, message: "No Lecture with the provided ID" })
+      }
     }
 
   })
@@ -597,9 +675,9 @@ app.post('/schedules/:id', (req, res) => {
 
 
 
-app.get('/assignments/:campus', (req, res)=>{
+app.get('/assignments', (req, res)=>{
 
-    pool.query("SELECT * FROM assignments WHERE campus='"+req.params.campus+"'", (error, result, row)=>{
+    pool.query("SELECT * FROM assignments ", (error, result, row)=>{
         if(error){
             res.send({...responseObj, success:false, message:"Error Fetching Assignments", data:error})
           
@@ -679,8 +757,8 @@ app.post('/assignments', (req, res)=>{
   
 
 
-    const {  course, question,  deadline, lecturer,  campus,  filestat, user, filename } =req.body;
-    pool.query("INSERT INTO `assignments` (`id`, `course`, `question`,`date`, `deadline`, `lecturer`, `file`, `campus`, `downloads`, `warnings`,  `filestat`, `user`) VALUES (NULL, '" + course + "', '" + question + "', '" + new Date() + "', '" + deadline + "', '" + lecturer + "', '" + filename +"', '"+campus+"', 0, 0,  '"+filestat+"', '"+user+"');", (error, result, row)=>{
+    const {  course, question,  title,  campus,  filestat, user, filename } =req.body;
+    pool.query("INSERT INTO `assignments` (`id`, `course`, `question`,`date`, `title`, `file`, `campus`, `downloads`, `warnings`,  `filestat`, `user`) VALUES (NULL, '" + course + "', '" + question + "', '" + new Date() + "',  '" + title + "', '" + filename +"', '"+campus+"', 0, 0,  '"+filestat+"', '"+user+"');", (error, result, row)=>{
                     if(error){
                       res.send({ ...responseObj, success: false, message:"Error Posting Assignment", data:error})
                     }else{
@@ -1368,7 +1446,7 @@ app.get('/assignments/user/:email', (req, res) => {
 
 app.get('/openai', async (req, res) => {
 
-mailer()
+
   res.send('Yes');
 })
 
@@ -1438,10 +1516,29 @@ if(email==="" || email===undefined || newPassword==="" || newPassword===undefine
   }
 }
 
+})
 
 
+
+app.get('/preview-doc/:id', (req, res)=>{
+  const fileArr = req.params.id.split("*")
+  let file = "User" + fileArr[0] + "/" + fileArr[1]
+  let fileObj=  fs.readFileSync('./Documents/User4/manual.misb')
+  
+  console.log(fileObj)
 
 })
+
+
+
+// define your own email api which points to your server.
+app.post('/sendemail/', function (req, res) {
+  const { name, email, subject, message } = req.body;
+  //implement your spam protection or checks.
+  sendEmail(name, email, subject, message);
+  res.send('Sent')
+});
+
 
 
 
