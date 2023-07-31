@@ -7,6 +7,24 @@ const fs=require('fs');
 const misbFormat = require("./TS/misb");
 const sendEmail=require('./mailer');
 
+const { generateArticleContent } = require('./ai');
+
+async function generateArticle(req, res) {
+  const prompt = req.body.prompt; // Get the prompt from the request body or any other source
+
+  try {
+    const articleContent = await generateArticleContent(prompt);
+    res.json({ article: articleContent });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to generate article content' });
+  }
+}
+
+
+
+
+
+
 
 const configuration = new Configuration({
   apiKey: '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',
@@ -17,21 +35,21 @@ const openai = new OpenAIApi(configuration);
 
 
 
-const pool = mysql.createPool({
-  host: "sql.freedb.tech",
-  user: "freedb_erim.microskool",
-  password: "$NdY??wEy5RqANP",
-  database: "freedb_microskool",
-  connectionLimit: 10,
-});
-
 // const pool = mysql.createPool({
-//   host: "localhost",
-//   user: "root",
-//   password: "",
-//   database: "microskool",
+//   host: "sql.freedb.tech",
+//   user: "freedb_erim.microskool",
+//   password: "$NdY??wEy5RqANP",
+//   database: "freedb_microskool",
 //   connectionLimit: 10,
 // });
+
+const pool = mysql.createPool({
+  host: "localhost",
+  user: "root",
+  password: "",
+  database: "microskool",
+  connectionLimit: 10,
+});
 
 const app=express();
 app.use(cors())
@@ -75,6 +93,24 @@ const multerStorageDoc = multer.diskStorage({
 })
 
 
+const multerStorageCampus = multer.diskStorage({
+  destination: (req, file, cb) => {
+
+    cb(null, 'assets')
+  },
+  filename: (req, file, cb) => {
+
+    cb(null, req.body.acro+".png");
+   
+
+
+
+  }
+})
+
+
+
+
 
 
 const multerStorage = multer.diskStorage({
@@ -88,7 +124,7 @@ cb(null, 'assets')
         let name=`${email?.split('@')[0]}--${Math.random(0,300)}`;
         let saveName=name+"."+ext;
 cb(null, `${name}.${ext}`)
-      pool.query("UPDATE users SET image='https://elegant-jacket-lamb.cyclic.app/assets/"+saveName+"' WHERE email='"+email+"'", (error, result, row)=>{
+      pool.query("UPDATE users SET image='http://localhost:5000/assets/"+saveName+"' WHERE email='"+email+"'", (error, result, row)=>{
    
 })
     }
@@ -109,6 +145,10 @@ const multerTempStorage = multer.diskStorage({
 })
 const uploadDoc=multer({
   storage: multerStorageDoc
+})
+
+const uploadCamp=multer({
+  storage: multerStorageCampus
 })
 
 const upload=multer({
@@ -424,7 +464,7 @@ app.post('/users', (req, res)=>{
             if(result.length>0){
                 res.send({...responseObj, message:"Email or Matric Already Exist"})
             }   else{
-                pool.query("INSERT INTO `users` (`id`, `first_name`, `surname`, `email`, `password`, `phone`, `matric`, `created_at`, `verified`, `verify_code`,  `campus`, `institution`,  `department`, `level`, `courses`, `image`, `coins`, `cgpa`) VALUES (NULL, '"+first_name+"', '"+surname+"', '"+email+"', '"+password+"', '"+phone+"', '"+matric+"', '"+new Date()+"', 'false', '', '',  '', '', '', '', '',0, 0)", (error, result, row)=>{
+                pool.query("INSERT INTO `users` (`id`, `first_name`, `surname`, `email`, `password`, `phone`, `matric`, `created_at`, `verified`, `verify_code`,  `campus`, `institution`,  `department`, `level`, `courses`, `image`, `coins`, `cgpa`, `privileges`) VALUES (NULL, '"+first_name+"', '"+surname+"', '"+email+"', '"+password+"', '"+phone+"', '"+matric+"', '"+new Date()+"', 'false', '', '',  '', '', '', '', '',0, 0,0)", (error, result, row)=>{
                    if(error){
                     res.send({...responseObj, message:"Error Occurred"+error})
                    }else{
@@ -442,9 +482,9 @@ app.post('/users', (req, res)=>{
 
 
 app.post('/users/:email', (req, res)=>{
-    let {first_name, surname,  matric, institution, campus, department, level, courses, coins}=req.body;
+  let { first_name, surname, matric, institution, campus, department, level, courses, coins, password, privileges }=req.body;
 console.log(coins)
-                pool.query("UPDATE `users` SET `first_name`='"+first_name+"',  `surname`='"+surname+"', `matric`='"+matric+"', `campus`='"+campus+"', `institution`='"+institution+"',  `department`='"+department+"', `level`='"+level+"', `courses`='"+courses+"', `coins`="+coins+" WHERE email='"+req.params.email+"'", (error, result, row)=>{
+  pool.query("UPDATE `users` SET `first_name`='" + first_name + "',  `surname`='" + surname + "', `matric`='" + matric + "', `campus`='" + campus + "', `institution`='" + institution + "',  `department`='" + department + "', `level`='" + level + "', `courses`='" + courses + "', `coins`=" + coins + ", `privileges`=" + privileges + ", `password`='" + password +"' WHERE email='"+req.params.email+"'", (error, result, row)=>{
                    if(error){
                     res.send({...responseObj, message:"Error Occurred"+error})
                    }else{
@@ -558,6 +598,154 @@ app.get('/departments', (req, res)=>{
     })
 
 })
+
+
+app.post('/departments', (req, res)=>{
+const {name}=req.body;
+console.log(name)
+if(name?.toLowerCase()?.includes('department')){
+  res.send({ ...responseObj, success: false, message: "keyword Department cannot be included"})
+}else{
+
+  
+  pool.query("SELECT * FROM departments WHERE name='"+name+"'", (error, result, row) => {
+    if (error) {
+      res.send({ ...responseObj, success: false, message: "Error Fetching Departments", data: error })
+      
+    } else {
+      if(result.length>0){
+        res.send({ ...responseObj, success: false, message: "Department Already Exist", data: error })
+        
+      }else{
+        pool.query("INSERT INTO departments (`id`,`name`, `user`)VALUES(NULL, '" + name + "', 'Admin')", (error, result, row) => {
+          if (error) {
+            res.send({ ...responseObj, success: false, message: "Error Creating Department " + error, data: error })
+
+          } else {
+            res.send({ ...responseObj, success: true, message: "Department Created Successfully", })
+          }
+        })
+        
+      }
+      
+      
+    }
+  })
+  
+}
+  
+})
+
+
+app.post('/departments/:id', (req, res)=>{
+const {name}=req.body;
+
+    pool.query("UPDATE departments SET name='"+name+"' WHERE id="+req.params.id+"", (error, result, row)=>{
+        if(error){
+            res.send({...responseObj, success:false, message:"Error Updating Department", data:error})
+          
+        }else{
+            res.send({...responseObj, success:true, message:"Department Updated Successfully",})
+        }
+    })
+
+})
+
+
+app.delete('/departments/:id', (req, res) => {
+ 
+
+  pool.query("DELETE FROM departments WHERE id=" + req.params.id + "", (error, result, row) => {
+    if (error) {
+      res.send({ ...responseObj, success: false, message: "Error Deleting Department "+error, data: error })
+
+    } else {
+      res.send({ ...responseObj, success: true, message: "Department Deleted Successfully", })
+    }
+  })
+
+})
+
+
+
+
+
+
+app.post('/campuses', uploadCamp.single('logo'), (req, res) => {
+  const { name, acro } = req.body;
+
+  if (name==="" || acro==="" ) {
+    res.send({ ...responseObj, success: false, message: "All Fields are Required" })
+  } else {
+
+
+    pool.query("SELECT * FROM campuses WHERE name='" + name + "'", (error, result, row) => {
+      if (error) {
+        res.send({ ...responseObj, success: false, message: "Error Fetching campuses", data: error })
+
+      } else {
+        if (result.length > 0) {
+          res.send({ ...responseObj, success: false, message: "Campus Already Exist", data: error })
+
+        } else {
+          pool.query("INSERT INTO campuses (`id`,`name`, `user`, `logo`, `acro`)VALUES(NULL, '" + name + "', 'Admin', 'http://localhost:5000/assets/"+req.body.acro+".png"+"', '"+acro+"')", (error, result, row) => {
+            if (error) {
+              res.send({ ...responseObj, success: false, message: "Error Creating Campus " + error, data: error })
+
+            } else {
+              res.send({ ...responseObj, success: true, message: "Campus Created Successfully", })
+            }
+          })
+
+        }
+
+
+      }
+    })
+
+  }
+
+})
+
+
+app.post('/campuses/:id', uploadCamp.single('logo'), (req, res) => {
+  const { name,  acro, logo } = req.body;
+
+if(logo===undefined||logo===null||logo==="null"){
+  res.send({ ...responseObj, success: false, message: "Logo is required" })
+}else{
+
+  pool.query("UPDATE campuses SET name='" + name + "', logo='http://localhost:5000/assets/" + req.body.acro + ".png" +"', acro='"+acro+"' WHERE id=" + req.params.id + "", (error, result, row) => {
+    if (error) {
+      res.send({ ...responseObj, success: false, message: "Error Updating Department", data: error })
+      
+    } else {
+      res.send({ ...responseObj, success: true, message: "Department Updated Successfully", })
+    }
+  })
+  
+}
+})
+
+
+app.delete('/campuses/:id', (req, res) => {
+
+
+  pool.query("DELETE FROM campuses WHERE id=" + req.params.id + "", (error, result, row) => {
+    if (error) {
+      res.send({ ...responseObj, success: false, message: "Error Deleting Department " + error, data: error })
+
+    } else {
+      res.send({ ...responseObj, success: true, message: "Department Deleted Successfully", })
+    }
+  })
+
+})
+
+
+
+
+
 
 
 
@@ -775,6 +963,18 @@ app.post('/assignments', (req, res)=>{
 
         if(amount>0){
 
+
+          if (item ==="Wallet Funded"){
+            const percent = (amount *2) / 100;
+            pool.query("INSERT INTO `revenues` (`id`, `description`,`user`, `amount`, `date`) VALUES (NULL,  'Revenue from " + sender + " Wallet Funding', '" + sender + "',  " + percent  + ", '" + new Date() + "');", (error, result, row) => {
+              if (error) {
+
+              } else {
+
+
+              }
+            })
+          }
         
                     pool.query("INSERT INTO `transactions` (`id`, `transaction_id`, `item`, `description_sender`, `description_receiver`, `sender`, `receiver`, `amount`, `date`, `status`) VALUES (NULL, '"+transaction_id+"', '"+item+"', '"+description_sender+"', '"+description_receiver+"', '"+sender+"', '"+receiver+"', "+amount+", '"+new Date()+"', '"+status+"');", (error, result, row)=>{
                         if(error){
@@ -805,6 +1005,42 @@ app.post('/assignments', (req, res)=>{
             })
         
         })
+
+
+app.get('/revenues', (req, res)=>{
+
+  pool.query("SELECT * FROM revenues ", (error, result, row) => {
+    if (error) {
+      res.send({ ...responseObj, success: false, message: "Error Fetching Revenues", data: error })
+
+    } else {
+      res.send({ ...responseObj, success: true, message: "Revenues Fetched Successfully", data: result })
+
+    }
+  })
+
+})
+
+app.post('/revenues', (req, res) => {
+  const {  description, user, amount } = req.body;
+
+  if (amount > 0) {
+
+
+    pool.query("INSERT INTO `revenues` (`id`, `description`,`user`, `amount`, `date`) VALUES (NULL,  '" + description + "', '" + user + "',  " + amount + ", '" + new Date() + "');", (error, result, row) => {
+      if (error) {
+        res.send({ ...responseObj, success: false, message: "Error Posting Revenue", data: error })
+      } else {
+        res.send({ ...responseObj, success: true, message: "Revenue Posted Successfully" })
+
+      }
+    })
+  } else {
+    res.send({ ...responseObj, success: false, message: "Amount most be greater than 0.00", data: [] })
+  }
+})
+
+
 
 
 app.post('/transactions/validate', (req, res) => {
@@ -962,6 +1198,8 @@ let SENDER;
     pool.query("UPDATE users SET coins=" + senderBalance + " WHERE email='" + sender + "'", (error, result, row) => {
 
     })
+
+
   })
 
 
@@ -980,7 +1218,14 @@ if(!error){
   })
 
 
+  pool.query("INSERT INTO `revenues` (`id`, `description`,`user`, `amount`, `date`) VALUES (NULL,  'Revenue from MiSB % charge from " + sender + " in favour of " + receiver + "', '" + sender + "',  " + amount - percent + ", '" + new Date() + "');", (error, result, row) => {
+    if (error) {
 
+    } else {
+
+
+    }
+  })
 
 
 
@@ -1539,6 +1784,10 @@ app.post('/sendemail/', function (req, res) {
   res.send('Sent')
 });
 
+
+
+// Add the route handler to your express app or any other backend framework
+app.post('/articles', generateArticle);
 
 
 
