@@ -35,21 +35,21 @@ const openai = new OpenAIApi(configuration);
 
 
 
-// const pool = mysql.createPool({
-//   host: "sql.freedb.tech",
-//   user: "freedb_erim.microskool",
-//   password: "$NdY??wEy5RqANP",
-//   database: "freedb_microskool",
-//   connectionLimit: 10,
-// });
-
 const pool = mysql.createPool({
-  host: "localhost",
-  user: "root",
-  password: "",
-  database: "microskool",
+  host: "sql.freedb.tech",
+  user: "freedb_erim.microskool",
+  password: "G%cV?zfxa%5SwTv",
+  database: "freedb_microskool",
   connectionLimit: 10,
 });
+
+// const pool = mysql.createPool({
+//   host: "localhost",
+//   user: "root",
+//   password: "",
+//   database: "microskool",
+//   connectionLimit: 10,
+// });
 
 const app=express();
 app.use(cors())
