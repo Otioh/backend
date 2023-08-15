@@ -131,6 +131,25 @@ const multerStorage = multer.diskStorage({
 })
 
 
+const multerStorageLecture = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'assets/videos')
+  },
+  filename: (req, file, cb) => {
+    let ext = file.mimetype.split('/')[1];
+    const { user, course, topic, lecturer, campus } = req.body;
+
+    let name = `${user?.split('@')[0]}--${Math.random(0, 300)}`;
+    let saveName = name + "." + ext;
+    cb(null, `${name}.${ext}`)
+
+    pool.query("INSERT INTO `lectures` (`id`, `course`, `topic`, `lecturer`, `date`, `video`, `user`, `campus`, `wrong`, `correct`, `lid`) VALUES (NULL, '" + course + "', '" + topic + "', '" + lecturer + "', '" + new Date() + "', './assets/videos/" + saveName + "', '" + user + "', '" + campus + "', '0', '0', '" + campus + Date.now() + course + Date.now() + "');", (error, result, row) => {
+
+    })
+  }
+})
+
+
 
 
 const multerTempStorage = multer.diskStorage({
@@ -154,6 +173,16 @@ const uploadCamp = multer({
 const upload = multer({
   storage: multerStorage
 })
+
+
+
+const uploadLecture = multer({
+  storage: multerStorageLecture
+})
+
+
+
+
 const getTempFile = multer({
   storage: multerTempStorage
 })
@@ -219,6 +248,17 @@ app.post('/file/:filename', getTempFile.array('file', 12), function (req, res, n
 
 
 
+app.post('/lecture', uploadLecture.single('lecture'), function (req, res, next) {
+
+
+
+  res.send({ ...responseObj, message: "Lecture Stream Initiated", success: true })
+})
+
+
+
+
+
 
 
 const cpUpload = upload.fields([{ name: 'avatar', maxCount: 1 }, { name: 'gallery', maxCount: 8 }])
@@ -257,13 +297,7 @@ app.get('/lectures/watch/:id', (req, res) => {
     } else {
       if (result.length > 0) {
 
-
-
-
-
-
-
-        const videoPath = `./assets/videos/vid.mp4`;
+        const videoPath = result[0].video;
 
         const videoStat = fs.statSync(videoPath);
 
@@ -1767,12 +1801,12 @@ app.post('/reset/', (req, res) => {
 
 
 
-app.get('/preview-doc/:id', (req, res) => {
-  const fileArr = req.params.id.split("*")
-  let file = "User" + fileArr[0] + "/" + fileArr[1]
-  let fileObj = fs.readFileSync('./Documents/User4/manual.misb')
-
-  console.log(fileObj)
+app.get('/preview-doc/:path', async (req, res) => {
+  const fileArr = req.params.path.split("*")
+  let file = fileArr[0] + "/" + fileArr[1]
+  let fileObj = await fs.readFileSync('./Documents/User4/manual.misb')
+  res.send(JSON.parse(fileObj))
+  // console.log(fileObj)
 
 })
 
