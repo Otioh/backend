@@ -297,7 +297,7 @@ app.get('/lectures/watch/:id', (req, res) => {
     } else {
       if (result.length > 0) {
 
-        const videoPath = result[0].video;
+        const videoPath = './assets/videos/vid.mp4';
 
         const videoStat = fs.statSync(videoPath);
 
