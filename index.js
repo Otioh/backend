@@ -137,8 +137,8 @@ const multerStorageLecture = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     let ext = file.mimetype.split('/')[1];
-    const { user, course, topic, lecturer, campus } = req.body;
-
+    const { user, course, topic, lecturer, campus } = req.params;
+    console.log(req.params)
     let name = `${user?.split('@')[0]}--${Math.random(0, 300)}`;
     let saveName = name + "." + ext;
     cb(null, `${name}.${ext}`)
@@ -253,6 +253,13 @@ app.post('/lecture', uploadLecture.single('lecture'), function (req, res, next) 
 
 
   res.send({ ...responseObj, message: "Lecture Stream Initiated", success: true })
+})
+
+app.post('/lecture/:campus/:user/:course/:lecturer/:topic', uploadLecture.single('lecture'), function (req, res, next) {
+
+
+
+  res.send({ ...responseObj, message: "Lecture Stream Initiated ", success: true })
 })
 
 
