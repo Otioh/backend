@@ -36,9 +36,11 @@ const configuration = new Configuration({
 const openai = new OpenAIApi(configuration);
 
 
+//Real Live Server
 
 
 
+//Test Live Server
 const pool = mysql.createPool({
   host: "sql.freedb.tech",
   user: "freedb_erim.microskool",
@@ -46,7 +48,10 @@ const pool = mysql.createPool({
   database: "freedb_microskool",
   connectionLimit: 10,
 });
+const endpoint = 'https://drab-rose-katydid-hose.cyclic.cloud/'
 
+
+// //Local Server
 // const pool = mysql.createPool({
 //   host: "localhost",
 //   user: "root",
@@ -54,6 +59,10 @@ const pool = mysql.createPool({
 //   database: "microskool",
 //   connectionLimit: 10,
 // });
+// // const endpoint = 'http://localhost:5000/';
+// const endpoint = 'http://192.168.1.44:5000/'
+
+
 
 
 const responseObj = {
@@ -124,7 +133,7 @@ const multerStorage = multer.diskStorage({
     let name = `${email?.split('@')[0]}--${Math.random(0, 300)}`;
     let saveName = name + "." + ext;
     cb(null, `${name}.${ext}`)
-    pool.query("UPDATE users SET image='https://elegant-jacket-lamb.cyclic.app/assets/" + saveName + "' WHERE email='" + email + "'", (error, result, row) => {
+    pool.query("UPDATE users SET image='" + endpoint + "assets/" + saveName + "' WHERE email='" + email + "'", (error, result, row) => {
 
     })
   }
@@ -132,20 +141,43 @@ const multerStorage = multer.diskStorage({
 
 
 const multerStorageLecture = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'assets/videos')
+  destination: async (req, file, cb) => {
+    fs.mkdir(`assets/videos/${req.params.lid}`, (err) => {
+      if (err) {
+
+        console.log(err)
+        cb(null, `assets/videos/${req.params.lid}`)
+      } else {
+        cb(null, `assets/videos/${req.params.lid}`)
+      }
+    })
+
   },
   filename: (req, file, cb) => {
     let ext = file.mimetype.split('/')[1];
-    const { user, course, topic, lecturer, campus } = req.params;
+    const { user, course, topic, lecturer, campus, lid } = req.params;
     console.log(req.params)
     let name = `${user?.split('@')[0]}--${Math.random(0, 300)}`;
     let saveName = name + "." + ext;
     cb(null, `${name}.${ext}`)
 
-    pool.query("INSERT INTO `lectures` (`id`, `course`, `topic`, `lecturer`, `date`, `video`, `user`, `campus`, `wrong`, `correct`, `lid`) VALUES (NULL, '" + course + "', '" + topic + "', '" + lecturer + "', '" + new Date() + "', './assets/videos/" + saveName + "', '" + user + "', '" + campus + "', '0', '0', '" + campus + Date.now() + course + Date.now() + "');", (error, result, row) => {
+    pool.query("SELECT * FROM lectures WHERE lid='" + lid + "'", (error, result, row) => {
+      if (error) {
+        res.send({ ...responseObj, message: "Error Retrieving Lecture" })
+      } else {
+        if (result.length > 0) {
+          fs.copyFile('assets/videos/adverts/mov_bbb.mp4', `assets/videos/${req.params.lid}/ads1.mp4`, (err) => {
+            console.log(err)
+          })
+        } else {
 
+          pool.query("INSERT INTO `lectures` (`id`, `course`, `topic`, `lecturer`, `date`, `video`, `user`, `campus`, `wrong`, `correct`, `lid`) VALUES (NULL, '" + course + "', '" + topic + "', '" + lecturer + "', '" + new Date() + "', './assets/videos/" + lid + "/" + saveName + "', '" + user + "', '" + campus + "', '0', '0', '" + lid + "');", (error, result, row) => {
+
+          })
+        }
+      }
     })
+
   }
 })
 
@@ -177,7 +209,7 @@ const upload = multer({
 
 
 const uploadLecture = multer({
-  storage: multerStorageLecture
+  storage: multerStorageLecture, limits: { fileSize: 50 * 1024 * 1024 }
 })
 
 
@@ -255,10 +287,14 @@ app.post('/lecture', uploadLecture.single('lecture'), function (req, res, next) 
   res.send({ ...responseObj, message: "Lecture Stream Initiated", success: true })
 })
 
-app.post('/lecture/:campus/:user/:course/:lecturer/:topic', uploadLecture.single('lecture'), function (req, res, next) {
 
 
 
+
+app.post('/lecture/:campus/:user/:course/:lecturer/:lid/:topic', uploadLecture.single('lecture'), function (req, res, next) {
+
+
+  console.log('first')
   res.send({ ...responseObj, message: "Lecture Stream Initiated ", success: true })
 })
 
@@ -296,7 +332,79 @@ app.get('/lectures/:campus', (req, res) => {
 
 })
 
-app.get('/lectures/watch/:id', (req, res) => {
+
+
+app.get('/filesdir', (req, res) => {
+  const directoryPath = 'assets/videos';
+
+  // Read the directory
+  fs.readdir(directoryPath, (err, files) => {
+    if (err) {
+      console.error('Error reading directory:', err);
+      return;
+    }
+
+    // Filter out directories, leave only files
+    const fileNames = files.filter(file => {
+      return fs.statSync(path.join(directoryPath, file)).isFile();
+    });
+
+    console.log('Files in the directory:', fileNames);
+  });
+
+
+})
+
+
+app.post('/intent', (req, res) => {
+  const { user, intent } = req.body;
+  if (user === "" || intent === "") {
+    res.send({ ...responseObj, message: "Error Retrieving User" })
+  } else {
+    pool.query("SELECT * FROM users WHERE email='" + user + "'", (error, result, row) => {
+      if (error) {
+        res.send({ ...responseObj, message: "Error Retrieving User" })
+      } else {
+        if (result.length > 0) {
+          if (parseInt(result[0].coins) < 30) {
+            res.send({ ...responseObj, message: result[0].first_name + ", You do not have sufficient coins, fund your wallet to continue" })
+          } else {
+
+
+            pool.query("UPDATE users SET intent='" + intent + "' WHERE email='" + user + "'", (err) => {
+              if (!err) {
+                res.send({ ...responseObj, message: "Intent Set", success: true, data: { rate: '295/Hour' } })
+              }
+            })
+
+          }
+        } else {
+          res.send({ ...responseObj, message: "Invalid User" })
+        }
+      }
+    })
+
+
+  }
+})
+
+
+app.get('/:user/lectures/watch/:id/:index', (req, res) => {
+  let meUser;
+  pool.query("SELECT * FROM users WHERE id='" + req.params.user + "'", (error, result, row) => {
+    if (error) {
+      res.send({ ...responseObj, message: "Error Retrieving User" })
+    } else {
+      if (result.length > 0) {
+        meUser = result[0]
+        if (parseInt(result[0].coins) < 30) {
+          res.send({ ...responseObj, message: result[0].first_name + ", You do not have sufficient coins, fund your wallet to continue" })
+
+
+        } else {
+          if (result[0].intent === req.params.id) {
+
+
 
   pool.query("SELECT * FROM lectures WHERE lid='" + req.params.id + "'", (error, result, row) => {
     if (error) {
@@ -304,70 +412,79 @@ app.get('/lectures/watch/:id', (req, res) => {
     } else {
       if (result.length > 0) {
 
-        const videoPath = result[0].video;
 
-        const videoStat = fs.statSync(videoPath);
+        function getVideoFiles(directory) {
+          return fs.readdirSync(directory).filter(file => {
+            const ext = path.extname(file).toLowerCase();
+            return ext === '.mp4' || ext === '.webm'; // Adjust video extensions as needed
+          }).reverse();
+        }
+        if (parseInt(req.params.index) > getVideoFiles('assets/videos/' + req.params.id).length - 1) {
 
-        const fileSize = videoStat.size;
+          console.log('out of range')
+          res.send('Out of Range')
 
-        const videoRange = req.headers.range;
 
-        if (videoRange) {
-
-          const parts = videoRange.replace(/bytes=/, "").split("-");
-
-          const start = parseInt(parts[0], 10);
-
-          const end = parts[1]
-
-            ? parseInt(parts[1], 10)
-
-            : fileSize - 1;
-
-          const chunksize = (end - start) + 1;
-
-          const file = fs.createReadStream(videoPath, { start, end });
-
-          const header = {
-
-            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-
-            'Accept-Ranges': 'bytes',
-
-            'Content-Length': chunksize,
-
-            'Content-Type': 'video/mp4',
-
-          };
-
-          res.writeHead(206, header);
-
-          file.pipe(res);
 
         } else {
 
-          const head = {
 
-            'Content-Length': fileSize,
 
-            'Content-Type': 'video/mp4',
+          res.setHeader('Content-Type', 'video/mp4'); // Set headers here
+          res.setHeader('Cache-Control', 'no-cache'); // Example: Prevent caching
 
-          };
 
-          res.writeHead(200, head);
 
-          fs.createReadStream(videoPath).pipe(res);
+
+
+
+
+          streamVideos(res, getVideoFiles('assets/videos/' + req.params.id)[parseInt(req.params.index)], `assets/videos/${req.params.id}`);
+
+
+
+
+
+          function streamVideos(response, file, videosDirectory) {
+
+
+            const videoFilePath = path.join(videosDirectory, file);
+            const videoStream = fs.createReadStream(videoFilePath);
+
+
+            let myCoins = parseInt(meUser.coins) - (25 / 2);
+
+
+            pool.query("UPDATE users SET coins=" + myCoins + " WHERE email='" + meUser.email + "'", (err) => {
+              if (!err) {
+                videoStream.pipe(response);
+              }
+            })
+
+
+
+
+
+
+
+
+            videoStream.on('end', () => {
+
+              console.log('first')
+
+
+
+              console.log('All videos streamed.');
+
+            });
+
+            videoStream.on('error', err => {
+              console.error('Error streaming video:', err);
+              response.status(500).send('Internal Server Error');
+            });
+          }
 
         }
-
-
-
-
-
-
-
-
-
 
 
 
@@ -375,11 +492,29 @@ app.get('/lectures/watch/:id', (req, res) => {
         res.send({ ...responseObj, message: "No Lecture with the provided ID" })
       }
     }
-
   })
 
 
+
+          } else {
+            res.send({ ...responseObj, message: "You don't intend to join this class" })
+          }
+
+
+
+
+
+
+
+        }
+      }
+    }
+  })
 })
+
+
+
+
 
 
 
@@ -505,7 +640,7 @@ app.post('/users', (req, res) => {
         if (result.length > 0) {
           res.send({ ...responseObj, message: "Email or Matric Already Exist" })
         } else {
-          pool.query("INSERT INTO `users` (`id`, `first_name`, `surname`, `email`, `password`, `phone`, `matric`, `created_at`, `verified`, `verify_code`,  `campus`, `institution`,  `department`, `level`, `courses`, `image`, `coins`, `cgpa`, `privileges`) VALUES (NULL, '" + first_name + "', '" + surname + "', '" + email + "', '" + password + "', '" + phone + "', '" + matric + "', '" + new Date() + "', 'false', '', '',  '', '', '', '', '',0, 0,0)", (error, result, row) => {
+          pool.query("INSERT INTO `users` (`id`, `first_name`, `surname`, `email`, `password`, `phone`, `matric`, `created_at`, `verified`, `verify_code`,  `campus`, `institution`,  `department`, `level`, `courses`, `image`, `coins`, `cgpa`, `privileges`, `intent`) VALUES (NULL, '" + first_name + "', '" + surname + "', '" + email + "', '" + password + "', '" + phone + "', '" + matric + "', '" + new Date() + "', 'false', '', '',  '', '', '', '', '" + endpoint + "assets/pro.png',0, 0,0, '')", (error, result, row) => {
             if (error) {
               res.send({ ...responseObj, message: "Error Occurred" + error })
             } else {
@@ -731,7 +866,7 @@ app.post('/campuses', uploadCamp.single('logo'), (req, res) => {
           res.send({ ...responseObj, success: false, message: "Campus Already Exist", data: error })
 
         } else {
-          pool.query("INSERT INTO campuses (`id`,`name`, `user`, `logo`, `acro`)VALUES(NULL, '" + name + "', 'Admin', 'https://elegant-jacket-lamb.cyclic.app/assets/" + req.body.acro + ".png" + "', '" + acro + "')", (error, result, row) => {
+          pool.query("INSERT INTO campuses (`id`,`name`, `user`, `logo`, `acro`)VALUES(NULL, '" + name + "', 'Admin', '" + endpoint + "assets/" + req.body.acro + ".png" + "', '" + acro + "')", (error, result, row) => {
             if (error) {
               res.send({ ...responseObj, success: false, message: "Error Creating Campus " + error, data: error })
 
@@ -758,7 +893,7 @@ app.post('/campuses/:id', uploadCamp.single('logo'), (req, res) => {
     res.send({ ...responseObj, success: false, message: "Logo is required" })
   } else {
 
-    pool.query("UPDATE campuses SET name='" + name + "', logo='https://elegant-jacket-lamb.cyclic.app/assets/" + req.body.acro + ".png" + "', acro='" + acro + "' WHERE id=" + req.params.id + "", (error, result, row) => {
+    pool.query("UPDATE campuses SET name='" + name + "', logo='" + endpoint + "assets/" + req.body.acro + ".png" + "', acro='" + acro + "' WHERE id=" + req.params.id + "", (error, result, row) => {
       if (error) {
         res.send({ ...responseObj, success: false, message: "Error Updating Department", data: error })
 
