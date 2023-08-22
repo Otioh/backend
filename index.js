@@ -166,9 +166,9 @@ const multerStorageLecture = multer.diskStorage({
         res.send({ ...responseObj, message: "Error Retrieving Lecture" })
       } else {
         if (result.length > 0) {
-          fs.copyFile('assets/videos/adverts/mov_bbb.mp4', `assets/videos/${req.params.lid}/ads1.mp4`, (err) => {
-            console.log(err)
-          })
+          // fs.copyFile('assets/videos/adverts/mov_bbb.mp4', `assets/videos/${req.params.lid}/ads1.mp4`, (err) => {
+          //   console.log(err)
+          // })
         } else {
 
           pool.query("INSERT INTO `lectures` (`id`, `course`, `topic`, `lecturer`, `date`, `video`, `user`, `campus`, `wrong`, `correct`, `lid`) VALUES (NULL, '" + course + "', '" + topic + "', '" + lecturer + "', '" + new Date() + "', './assets/videos/" + lid + "/" + saveName + "', '" + user + "', '" + campus + "', '0', '0', '" + lid + "');", (error, result, row) => {
