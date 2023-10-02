@@ -1,66 +1,98 @@
 const express = require('express');
-const mysql = require('mysql2');
+const mysql = require('mysql');
 const cors = require('cors');
 const path = require('path');
 const { Configuration, OpenAIApi } = require('openai');
 const fs = require('fs');
 const misbFormat = require("./TS/misb");
 const sendEmail = require('./mailer');
+const http = require('http')
+const nodemailer = require('nodemailer');
 
-const { generateArticleContent } = require('./ai');
 
-async function generateArticle(req, res) {
-  const prompt = req.body.prompt; // Get the prompt from the request body or any other source
 
-  try {
-    const articleContent = await generateArticleContent(prompt);
-    res.json({ article: articleContent });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to generate article content' });
-  }
+const errorObj = {
+  message: 'Something went wrong',
+  fields: [
+    {
+      label: '',
+      messagel: ''
+    }
+  ]
 }
 
 
 
 
+
+
+
+
 const app = express();
+const server = http.createServer(app);
+
+// Set the server timeout to 2 minutes (120,000 milliseconds)
+server.timeout = 120000;
+
 app.use(cors())
 const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 
+const apiKey = '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';
+
+// Initialize the OpenAI API client
+
+
 const configuration = new Configuration({
-  apiKey: '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',
+  organization: "org-zcEroWt0z8uG12N0kgrzPC0L",
+  apiKey: apiKey,
 });
 const openai = new OpenAIApi(configuration);
 
 
-//Real Live Server
 
 
 
-//Test Live Server
-const pool = mysql.createPool({
-  host: "sql.freedb.tech",
-  user: "freedb_erim.microskool",
-  password: "G%cV?zfxa%5SwTv",
-  database: "freedb_microskool",
-  connectionLimit: 10,
-});
-const endpoint = 'https://drab-rose-katydid-hose.cyclic.cloud/'
 
 
-// //Local Server
+
+
+// //Real Live Server
 // const pool = mysql.createPool({
 //   host: "localhost",
-//   user: "root",
-//   password: "",
-//   database: "microskool",
+//   user: "dropoudc_dropoud_admin",
+//   password: "DxRUK#Ubr~3h",
+//   database: "dropoudc_Dropoud",
+
+// });
+// const endpoint = 'https://backend.dropoud.com/'
+
+
+
+
+// //Test Live Server   
+// const pool = mysql.createPool({
+//   host: "sql.freedb.tech",
+//   user: "freedb_erim.microskool",
+//   password: "G%cV?zfxa%5SwTv",
+//   database: "freedb_microskool",
 //   connectionLimit: 10,
 // });
-// // const endpoint = 'http://localhost:5000/';
-// const endpoint = 'http://192.168.1.44:5000/'
+// const endpoint = 'https://drab-rose-katydid-hose.cyclic.cloud/'
+
+
+//Local Server
+const pool = mysql.createPool({
+  host: "localhost",
+  user: "root",
+  password: "",
+  database: "dropoud",
+  connectionLimit: 10,
+});
+// const endpoint = 'http://localhost:5000/';
+const endpoint = 'http://192.168.1.44:5000/'
 
 
 
@@ -70,6 +102,23 @@ const responseObj = {
   success: false,
   data: []
 }
+
+
+
+
+
+const transporter = nodemailer.createTransport({
+  host: 'mail.dropoud.com', // Replace with your SMTP server hostname
+  port: 465, // Replace with the appropriate port
+  secure: true, // Set to true for SSL connections (e.g., for Gmail)
+  auth: {
+    user: 'support@dropoud.com', // Your email address
+    pass: 'x6qv#qY)yR;8', // Your email password
+  },
+});
+
+
+
 
 
 
@@ -119,6 +168,27 @@ const multerStorageCampus = multer.diskStorage({
 
 
 
+const multerStorageAssignment = multer.diskStorage({
+  destination: (req, file, cb) => {
+
+    cb(null, 'assets')
+  },
+  filename: (req, file, cb) => {
+    const fileName = "myFile" + req.body.course + Date.now() + ".misb"
+    cb(null, fileName);
+
+    const { course, title, campus, filestat, user } = req.params;
+
+    pool.query("INSERT INTO `assignments` (`id`, `course`,`date`, `title`, `file`, `campus`, `downloads`, `warnings`,  `filestat`, `user`) VALUES (NULL, '" + course + "',  '" + new Date() + "',  '" + title + "', '" + "assets/" + fileName + "', '" + campus + "', 0, 0,  '" + filestat + "', '" + user + "');", (error, result, row) => {
+      if (error) {
+
+      }
+    })
+
+
+
+  }
+})
 
 
 
@@ -130,7 +200,7 @@ const multerStorage = multer.diskStorage({
     let ext = file.mimetype.split('/')[1];
     const email = req.params.email;
 
-    let name = `${email?.split('@')[0]}--${Math.random(0, 300)}`;
+    let name = email ? `${email.split('@')[0]}--${Math.random(0, 300)}` : 'email';
     let saveName = name + "." + ext;
     cb(null, `${name}.${ext}`)
     pool.query("UPDATE users SET image='" + endpoint + "assets/" + saveName + "' WHERE email='" + email + "'", (error, result, row) => {
@@ -156,8 +226,8 @@ const multerStorageLecture = multer.diskStorage({
   filename: (req, file, cb) => {
     let ext = file.mimetype.split('/')[1];
     const { user, course, topic, lecturer, campus, lid } = req.params;
-    console.log(req.params)
-    let name = `${user?.split('@')[0]}--${Math.random(0, 300)}`;
+
+    let name = user ? `${user.split('@')[0]}--${Math.random(0, 300)}` : 'user';
     let saveName = name + "." + ext;
     cb(null, `${name}.${ext}`)
 
@@ -166,9 +236,7 @@ const multerStorageLecture = multer.diskStorage({
         res.send({ ...responseObj, message: "Error Retrieving Lecture" })
       } else {
         if (result.length > 0) {
-          // fs.copyFile('assets/videos/adverts/mov_bbb.mp4', `assets/videos/${req.params.lid}/ads1.mp4`, (err) => {
-          //   console.log(err)
-          // })
+
         } else {
 
           pool.query("INSERT INTO `lectures` (`id`, `course`, `topic`, `lecturer`, `date`, `video`, `user`, `campus`, `wrong`, `correct`, `lid`) VALUES (NULL, '" + course + "', '" + topic + "', '" + lecturer + "', '" + new Date() + "', './assets/videos/" + lid + "/" + saveName + "', '" + user + "', '" + campus + "', '0', '0', '" + lid + "');", (error, result, row) => {
@@ -209,8 +277,18 @@ const upload = multer({
 
 
 const uploadLecture = multer({
-  storage: multerStorageLecture, limits: { fileSize: 50 * 1024 * 1024 }
+  storage: multerStorageLecture, limits: { fileSize: 300 * 1024 * 1024 }
 })
+
+
+
+
+const uploadAssignment = multer({
+  storage: multerStorageAssignment
+})
+
+
+
 
 
 
@@ -226,6 +304,7 @@ app.use(express.static(path.join(__dirname, "assets")));
 
 
 app.post('/profile/:email', upload.single('avatar'), function (req, res, next) {
+  console.log(req.body)
   res.send({ ...responseObj, message: "Upload Successful", success: true })
 })
 
@@ -233,6 +312,10 @@ app.post('/photos/upload', upload.array('photos', 12), function (req, res, next)
   // req.files is array of `photos` files
   // req.body will contain the text fields, if there were any
 })
+
+
+
+
 
 
 app.post('/file/:filename', getTempFile.array('file', 12), function (req, res, next) {
@@ -274,6 +357,209 @@ app.post('/file/:filename', getTempFile.array('file', 12), function (req, res, n
 
 
 
+
+
+// Handle user input and generate the article
+app.post('/generate-article', async (req, res) => {
+
+  const { prompt, email, password } = req.body;
+
+  if (!email) {
+    res.status(422).send({ ...errorObj, message: 'User Email is Required!' })
+    return
+  }
+
+  if (!password) {
+    res.status(422).send({ ...errorObj, message: 'User Password is Required!' })
+    return
+  }
+
+
+  if (!prompt) {
+    res.status(422).send({ ...errorObj, message: 'AI Prompt or Article Description is Required!' })
+    return
+  }
+
+
+
+
+  pool.query("SELECT * FROM users WHERE email='" + email + "' && password='" + password + "'", (error, result, row) => {
+    if (error) {
+      res.status(503).send({ ...errorObj, message: "Error Retrieving User" })
+    } else {
+      if (result.length > 0) {
+
+        if (parseInt(result[0].coins) > 200) {
+
+          let newbalance = parseFloat(result[0].coins) - 200;
+          pool.query("UPDATE users SET coins=" + newbalance + " WHERE email='" + email + "' ", (error, result, row) => {
+            if (error) {
+              res.status(503).send({ ...errorObj, message: "Error Charging User" })
+              console.log(error)
+            } else {
+
+
+
+
+
+
+
+              try {
+                // Generate article content using OpenAI
+                // const response = await openai.createCompletion({
+                //   prompt: prompt,
+                //   max_tokens: 10, // Adjust the max tokens based on your desired article length
+                // });
+
+                const response = {
+                  data: {
+                    choices: [{
+                      text: `
+    
+    Transforming Education: A Blueprint for Improving Education in a Country
+
+##Introduction
+
+Education is the cornerstone of any thriving society, driving economic growth, innovation, and social progress. It is the key to unlocking the potential of individuals and the nation as a whole. However, many countries face challenges in their education systems, including inadequate resources, outdated curriculum, and unequal access to quality education. To overcome these obstacles and create a brighter future, we must focus on improving education in a comprehensive and sustainable way. In this article, we will discuss a blueprint for enhancing education in a country.
+
+##Invest in Quality Teachers
+Teachers are the heart and soul of the education system. To improve education, it is essential to attract and retain high-quality educators. This can be achieved through:
+
+Competitive salaries and benefits to motivate and retain talented teachers.
+Ongoing professional development opportunities to keep educators up-to-date with the latest teaching methods.
+Mentorship and support programs for new teachers to help them excel in their roles.
+Recognizing and rewarding outstanding teaching practices.
+
+##Update Curriculum and Pedagogy
+The world is constantly evolving, and so too should our educational content and methods. To ensure relevance and effectiveness, it is imperative to:
+
+Review and update curriculum regularly to reflect current knowledge and societal needs.
+Promote student-centered learning approaches, encouraging critical thinking, creativity, and problem-solving.
+Incorporate technology and digital resources to enhance learning experiences.
+Foster a culture of lifelong learning among both students and educators.
+
+##Equitable Access to Education
+Education should be accessible to all, regardless of socio-economic status, location, or background. To achieve this goal, it is essential to:
+
+Invest in infrastructure and facilities to provide safe and conducive learning environments.
+Offer scholarships and financial aid to disadvantaged students.
+Promote inclusive education by accommodating students with diverse needs.
+Bridge the digital divide by ensuring access to technology and internet connectivity for all students.
+
+#Assess and Measure Progress
+Effective education reform requires a robust system of assessment and accountability. To track progress and make informed decisions, it is crucial to:
+
+Develop standardized assessments that measure essential skills and knowledge.
+Establish a data-driven approach to monitor student performance and identify areas for improvement.
+Encourage transparency by sharing assessment results with educators, parents, and the public.
+Use assessment data to inform policy and curriculum changes.
+
+##Promote Parental and Community Involvement
+Education is a collaborative effort between schools, parents, and the community. To enhance the educational experience, it is important to:
+
+Encourage parental involvement through regular communication, parent-teacher conferences, and volunteer opportunities.
+Create partnerships with local businesses and organizations to provide resources, mentorship, and real-world experiences for students.
+Foster a sense of community and support for education through outreach programs and initiatives.
+
+##Embrace Innovation and Research
+To stay ahead in the global knowledge economy, countries must embrace innovation and research in education. This includes:
+
+Funding research projects to explore new teaching methods, technologies, and educational policies.
+Encouraging educators to experiment with innovative approaches in the classroom.
+Supporting entrepreneurship in education to develop and scale innovative solutions.
+Collaborating with international partners to learn from global best practices.
+
+##Conclusion
+
+Improving education in a country is a multifaceted endeavor that requires dedication, collaboration, and a long-term vision. By investing in quality teachers, updating curriculum and pedagogy, ensuring equitable access, measuring progress, involving parents and communities, and embracing innovation and research, nations can transform their education systems and provide a brighter future for their citizens. Education is not only a key to personal success but also the foundation of a prosperous and inclusive society.
+    
+
+##References
+Darling-Hammond, L. (2017). Teacher education around the world: What can we learn from international practice? European Journal of Teacher Education, 40(3), 291-309.
+
+Ingersoll, R. M., & Strong, M. (2011). The impact of induction and mentoring programs for beginning teachers: A critical review of the research. Review of Educational Research, 81(2), 201-233.
+
+Camilli, G., Vargas, S., Ryan, S., & Barnett, W. S. (2010). Meta-analysis of the effects of early education interventions on cognitive and social development. Teachers College Record, 112(3), 579-620.
+
+PricewaterhouseCoopers. (2015). Global Top 100 companies by market capitalization: Global Top 100 companies by market capitalization.
+
+UNESCO. (2017). Inclusive education: The way of the future.
+
+Hanushek, E. A., & Woessmann, L. (2007). The role of education quality in economic growth. World Bank Policy Research Working Paper, (4122).
+
+Epstein, J. L. (2001). School, family, and community partnerships: Preparing educators and improving schools. Westview Press.
+
+The World Bank. (2009). The Road to Results: Designing and Conducting Effective Development Evaluations. World Bank Publications.
+
+    `}]
+                  }
+                }
+                console.log(response)
+                const articleContent = response.data.choices[0].text.split('##References')[0];
+                const refs = response.data.choices[0].text.split('##References')[1];
+
+
+                // Format the article as HTML with div, img, and heading tags
+                let formattedHTML = formatContentWithTagsAndImages(articleContent);
+                const references = refs.split('\n\n');
+                let listrefs = '';
+
+                references.forEach((ref) => {
+                  listrefs += `<li>${ref}</li>`
+                })
+                formattedHTML += `<di>
+    <h2>References:</h2>
+    <ol> ${listrefs}</ol></di>`
+
+                res.send(formattedHTML);
+                // res.status(422).send({...errorObj , message:'We sent the wrong message'})
+
+
+
+              } catch (error) {
+                res.status(500).send('Error generating article.' + error);
+              }
+            }
+          })
+        } else {
+          res.status(402).send({ ...errorObj, message: result[0].first_name + "! Your wallet balace is insufficient" })
+        }
+      } else {
+        res.status(401).send({ ...errorObj, message: "Invalid User Details" })
+      }
+    }
+  })
+});
+
+// Function to format content with specific tags and images
+function formatContentWithTagsAndImages(articleContent) {
+  const lines = articleContent.split('\n');
+  let formattedHTML = '';
+
+  for (const line of lines) {
+    if (line.startsWith('#')) {
+      // If it's a heading, use the corresponding h1, h2, etc. tag
+      const headingLevel = line.match(/#+/)[0].length;
+      const headingText = line.replace(/#+/, '').trim();
+      formattedHTML += `<h${headingLevel}>${headingText}</h${headingLevel}>`;
+    } else if (line.startsWith('![image](')) {
+      // If it's an image, use the img tag with a database URL
+      const imageURL = line.match(/\((.*?)\)/)[1];
+      // You can replace 'database-url/' with the actual URL to your database
+      formattedHTML += `<img src="database-url/${imageURL}" alt="Image">`;
+    }
+    else {
+      // Otherwise, use the div tag for paragraphs
+      formattedHTML += `<div>${line}</div>`;
+    }
+
+
+  }
+
+
+
+  return formattedHTML;
+}
 
 
 
@@ -349,7 +635,7 @@ app.get('/filesdir', (req, res) => {
       return fs.statSync(path.join(directoryPath, file)).isFile();
     });
 
-    console.log('Files in the directory:', fileNames);
+    res.send(fileNames);
   });
 
 
@@ -370,10 +656,18 @@ app.post('/intent', (req, res) => {
             res.send({ ...responseObj, message: result[0].first_name + ", You do not have sufficient coins, fund your wallet to continue" })
           } else {
 
-
             pool.query("UPDATE users SET intent='" + intent + "' WHERE email='" + user + "'", (err) => {
               if (!err) {
-                res.send({ ...responseObj, message: "Intent Set", success: true, data: { rate: '295/Hour' } })
+                pool.query("SELECT * FROM lectures WHERE lid='" + intent + "'", (error, result, row) => {
+                  if (error) {
+
+                  } else {
+                    if (result.length > 0) {
+                      res.send({ ...responseObj, message: "Intent Set", success: true, data: { rate: '295/Hour', user: result[0].user } })
+
+                    }
+                  }
+                })
               }
             })
 
@@ -391,6 +685,29 @@ app.post('/intent', (req, res) => {
 
 app.get('/:user/lectures/watch/:id/:index', (req, res) => {
   let meUser;
+  if (req.params.user !== undefined || req.params.user !== 'undefined' || req.params.index === '0') {
+
+    pool.query("SELECT * FROM lecture_views WHERE user='" + req.params.user + "' &&  lecture_id='" + req.params.id + "' ", (error, result, row) => {
+      if (error) {
+
+      } else {
+        if (result.length > 0) {
+
+        } else {
+          pool.query("INSERT INTO `lecture_views` (`id`, `user`, `lecture_id`, `date`) VALUES (NULL, '" + req.params.user + "', '" + req.params.id + "', '" + new Date() + "')", (error, result, row) => {
+            if (error) {
+
+            } else {
+
+            }
+          })
+        }
+
+      }
+    })
+  }
+
+
   pool.query("SELECT * FROM users WHERE id='" + req.params.user + "'", (error, result, row) => {
     if (error) {
       res.send({ ...responseObj, message: "Error Retrieving User" })
@@ -406,93 +723,93 @@ app.get('/:user/lectures/watch/:id/:index', (req, res) => {
 
 
 
-  pool.query("SELECT * FROM lectures WHERE lid='" + req.params.id + "'", (error, result, row) => {
-    if (error) {
-      res.send({ ...responseObj, message: "Error Retrieving Lecture" })
-    } else {
-      if (result.length > 0) {
+            pool.query("SELECT * FROM lectures WHERE lid='" + req.params.id + "'", (error, result, row) => {
+              if (error) {
+                res.send({ ...responseObj, message: "Error Retrieving Lecture" })
+              } else {
+                if (result.length > 0) {
 
 
-        function getVideoFiles(directory) {
-          return fs.readdirSync(directory).filter(file => {
-            const ext = path.extname(file).toLowerCase();
-            return ext === '.mp4' || ext === '.webm'; // Adjust video extensions as needed
-          }).reverse();
-        }
-        if (parseInt(req.params.index) > getVideoFiles('assets/videos/' + req.params.id).length - 1) {
+                  function getVideoFiles(directory) {
+                    return fs.readdirSync(directory).filter(file => {
+                      const ext = path.extname(file).toLowerCase();
+                      return ext === '.mp4' || ext === '.webm'; // Adjust video extensions as needed
+                    }).reverse();
+                  }
+                  if (parseInt(req.params.index) > getVideoFiles('assets/videos/' + req.params.id).length - 1) {
 
-          console.log('out of range')
-          res.send('Out of Range')
-
-
-
-        } else {
+                    console.log('out of range')
+                    res.send('Out of Range')
 
 
 
-          res.setHeader('Content-Type', 'video/mp4'); // Set headers here
-          res.setHeader('Cache-Control', 'no-cache'); // Example: Prevent caching
+                  } else {
 
 
 
-
-
-
-
-          streamVideos(res, getVideoFiles('assets/videos/' + req.params.id)[parseInt(req.params.index)], `assets/videos/${req.params.id}`);
+                    res.setHeader('Content-Type', 'video/mp4'); // Set headers here
+                    res.setHeader('Cache-Control', 'no-cache'); // Example: Prevent caching
 
 
 
 
 
-          function streamVideos(response, file, videosDirectory) {
 
 
-            const videoFilePath = path.join(videosDirectory, file);
-            const videoStream = fs.createReadStream(videoFilePath);
+                    streamVideos(res, getVideoFiles('assets/videos/' + req.params.id)[parseInt(req.params.index)], `assets/videos/${req.params.id}`);
 
 
-            let myCoins = parseInt(meUser.coins) - (25 / 2);
 
 
-            pool.query("UPDATE users SET coins=" + myCoins + " WHERE email='" + meUser.email + "'", (err) => {
-              if (!err) {
-                videoStream.pipe(response);
+
+                    function streamVideos(response, file, videosDirectory) {
+
+
+                      const videoFilePath = path.join(videosDirectory, file);
+                      const videoStream = fs.createReadStream(videoFilePath);
+
+
+                      let myCoins = parseInt(meUser.coins) - (25 / 2);
+
+
+                      pool.query("UPDATE users SET coins=" + myCoins + " WHERE email='" + meUser.email + "'", (err) => {
+                        if (!err) {
+                          videoStream.pipe(response);
+                        }
+                      })
+
+
+
+
+
+
+
+
+                      videoStream.on('end', () => {
+
+                        console.log('first')
+
+
+
+                        console.log('All videos streamed.');
+
+                      });
+
+                      videoStream.on('error', err => {
+                        console.error('Error streaming video:', err);
+                        response.status(500).send('Internal Server Error');
+                      });
+                    }
+
+                  }
+
+
+
+                } else {
+                  res.send({ ...responseObj, message: "No Lecture with the provided ID" })
+                }
               }
             })
-
-
-
-
-
-
-
-
-            videoStream.on('end', () => {
-
-              console.log('first')
-
-
-
-              console.log('All videos streamed.');
-
-            });
-
-            videoStream.on('error', err => {
-              console.error('Error streaming video:', err);
-              response.status(500).send('Internal Server Error');
-            });
-          }
-
-        }
-
-
-
-      } else {
-        res.send({ ...responseObj, message: "No Lecture with the provided ID" })
-      }
-    }
-  })
 
 
 
@@ -530,9 +847,7 @@ app.get('/', (req, res) => {
 });
 
 
-app.post('/', (req, res) => {
-  res.send({ ...responseObj, message: "Login Successful", success: true })
-})
+
 
 
 app.get('/users', (req, res) => {
@@ -548,6 +863,24 @@ app.get('/users', (req, res) => {
 })
 
 
+app.get('/lectures/viewers/:lid', (req, res) => {
+  pool.query("SELECT * FROM lecture_views WHERE lecture_id='" + req.params.lid + "'", (error, result, row) => {
+    if (error) {
+      res.send({ ...responseObj, message: "Error Retrieving Viewers" })
+    } else {
+      if (result.length > 0) {
+
+        res.send({ ...responseObj, data: result, success: true, message: "Viewers Retrieved Successfully" })
+      } else {
+        res.send({ ...responseObj, message: "Lecture does not exist" })
+      }
+    }
+
+  })
+
+})
+
+
 
 app.get('/auth/:email', (req, res) => {
   pool.query("SELECT verified FROM users WHERE email='" + req.params.email + "'", (error, result, row) => {
@@ -555,17 +888,122 @@ app.get('/auth/:email', (req, res) => {
       res.send({ ...responseObj, message: "Error Retrieving Users" })
     } else {
       if (result.length > 0) {
-        if (result[0]?.verified === 'true') {
-          res.send({ ...responseObj, data: false, success: true, message: "Users Validity Retrieved Successfully" })
+        if (result[0].verified > 0) {
+          res.send({ ...responseObj, success: true, message: "Users Validity Retrieved Successfully" })
         } else {
 
           let code = Math.floor(Math.random() * 1000000);
           pool.query("UPDATE users SET verify_code=" + code + " WHERE email='" + req.params.email + "'", (error, result, row) => {
             if (error) { }
           })
-          console.log(code)
-          // mailer({ recipients: req.params.email, subject: 'Email Verification - Microskool', message: 'Use this code to verify your Email: ' + code })
-          res.send({ ...responseObj, success: true, message: "Check your mailbox for a verification code " + req.params.email, data: true })
+
+          const mailOptions = {
+            from: 'support@dropoud.com',
+            to: req.params.email,
+            subject: 'Account Verification OTP',
+            html: `
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dropoud Account Verification OTP</title>
+    <style>
+        /* Reset some default styles */
+        body, p {
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Set background color and text color for the whole email */
+        body {
+            background-color: #f0f0f0;
+            color: #333;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Header styles */
+        .header {
+            background-color: rgb(83,83,170);
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Content styles */
+        .content {
+            padding: 20px;
+        }
+
+        /* Footer styles */
+        .footer {
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Dropoud</h1>
+        <p>Account Security</p>
+    </div>
+    <div class="content">
+       
+     Your One-Time Password (OTP) for account verification is: <h2>${code}</h2>.
+
+<h4>Instructions:</h4>
+<ol>
+<li>
+Do not share this OTP with anyone.
+
+</li>
+
+<li>
+This code is valid for the next 10 minutes.
+
+</li>
+
+<li>
+
+Use this OTP for account verification on our platform.
+</li>
+
+<li>
+Ignore this message if you did not request an OTP.
+
+</li>
+<li>
+
+No one from Dropoud will ask for your OTP.
+</li>
+
+</ol>
+For support or inquiries, contact our customer service at 090609666606.
+
+    </div>
+   
+    <div class="footer">
+        <p>&copy; 2023 Dropoud | <a href="https://www.dropoud.com">Visit our website</a></p>
+    </div>
+</body>
+</html>
+
+  `,
+          };
+
+          transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+              console.error('Error sending email:', error);
+
+            } else {
+              console.log('Email sent:', info.response);
+
+            }
+          });
+
+          res.send({ ...responseObj, success: false, message: "Check your mailbox for a verification code " + req.params.email })
         }
       } else {
         res.send({ ...responseObj, success: false, message: "No user found with " + req.params.email })
@@ -586,7 +1024,7 @@ app.post('/auth/:email', (req, res) => {
       res.send({ ...responseObj, message: "Error Retrieving Users" })
     } else {
       if (result.length > 0) {
-        pool.query("UPDATE users SET verified='true' WHERE email='" + req.params.email + "' && verify_code='" + code + "' ", (error, result, row) => {
+        pool.query("UPDATE users SET verified=1 WHERE email='" + req.params.email + "' && verify_code='" + code + "' ", (error, result, row) => {
           if (error) {
             res.send({ ...responseObj, data: result, message: "Error Verifying Email, try again" })
 
@@ -640,7 +1078,7 @@ app.post('/users', (req, res) => {
         if (result.length > 0) {
           res.send({ ...responseObj, message: "Email or Matric Already Exist" })
         } else {
-          pool.query("INSERT INTO `users` (`id`, `first_name`, `surname`, `email`, `password`, `phone`, `matric`, `created_at`, `verified`, `verify_code`,  `campus`, `institution`,  `department`, `level`, `courses`, `image`, `coins`, `cgpa`, `privileges`, `intent`) VALUES (NULL, '" + first_name + "', '" + surname + "', '" + email + "', '" + password + "', '" + phone + "', '" + matric + "', '" + new Date() + "', 'false', '', '',  '', '', '', '', '" + endpoint + "assets/pro.png',0, 0,0, '')", (error, result, row) => {
+          pool.query("INSERT INTO `users` (`id`, `first_name`, `surname`, `email`, `password`, `phone`, `matric`, `created_at`, `verified`, `verify_code`,  `campus`, `institution`,  `department`, `level`, `courses`, `image`, `coins`, `cgpa`, `privileges`, `intent`) VALUES (NULL, '" + first_name + "', '" + surname + "', '" + email + "', '" + password + "', '" + phone + "', '" + matric + "', '" + new Date() + "', 0, '', '',  '', '', '', '', '" + endpoint + "assets/pro.png',0, 0,0, '')", (error, result, row) => {
             if (error) {
               res.send({ ...responseObj, message: "Error Occurred" + error })
             } else {
@@ -681,13 +1119,13 @@ app.post('/users/:email', (req, res) => {
 app.get('/users/:email', (req, res) => {
   pool.query("SELECT * FROM users WHERE email='" + req.params.email + "'", (error, result, row) => {
     if (error) {
-      res.send({ ...responseObj, message: "Error Retrieving Users" })
+      res.send({ ...responseObj, message: "Error Retrieving User" })
     } else {
       if (result.length > 0) {
-        res.send({ ...responseObj, data: result, success: true, message: "Users Retrieved Successfully" })
+        res.send({ ...responseObj, data: result, success: true, message: "User Retrieved Successfully" })
 
       } else {
-        res.send({ ...responseObj, data: result, success: false, message: "Users Not Found" })
+        res.send({ ...responseObj, data: result, success: false, message: "User Not Found" })
 
       }
     }
@@ -705,7 +1143,7 @@ app.get('/mycourses/:email', (req, res) => {
     if (error) {
       res.send({ ...responseObj, message: "Error Retrieving mycourses" })
     } else {
-      res.send({ ...responseObj, data: result, success: true, message: "mycourses Retrieved Successfully" })
+      res.send({ ...responseObj, data: result, success: true, message: req.params.email + " courses Retrieved Successfully" })
     }
 
   })
@@ -781,7 +1219,7 @@ app.get('/departments', (req, res) => {
 app.post('/departments', (req, res) => {
   const { name } = req.body;
   console.log(name)
-  if (name?.toLowerCase()?.includes('department')) {
+  if (name.toLowerCase().includes('department')) {
     res.send({ ...responseObj, success: false, message: "keyword Department cannot be included" })
   } else {
 
@@ -935,7 +1373,7 @@ app.post('/courses', (req, res) => {
 
 
   } else {
-    pool.query("SELECT * FROM allcourse WHERE code='" + code + "'", (error, result, row) => {
+    pool.query("SELECT * FROM allcourse WHERE code='" + code + "' && campus='" + campus + "'", (error, result, row) => {
       if (error) {
         res.send({ ...responseObj, success: false, message: "Error Validating Course", data: error })
       } else {
@@ -1082,6 +1520,9 @@ app.delete('/assignments/:id', (req, res) => {
 
 app.get('/schedules/:campus/:department/:level', (req, res) => {
 
+
+
+
   pool.query(
     "SELECT * FROM schedule WHERE campus='" +
     req.params.campus +
@@ -1119,19 +1560,10 @@ app.post('/postFile/:id', uploadDoc.single('file'), (req, res) => {
 
 })
 
-app.post('/assignments', (req, res) => {
+app.post('/assignments/:campus/:user/:course/:title/:filestat', uploadAssignment.single('misb'), (req, res) => {
+  res.send({ ...responseObj, success: true, message: "Assignment Posted Successfully" })
 
 
-
-  const { course, question, title, campus, filestat, user, filename } = req.body;
-  pool.query("INSERT INTO `assignments` (`id`, `course`, `question`,`date`, `title`, `file`, `campus`, `downloads`, `warnings`,  `filestat`, `user`) VALUES (NULL, '" + course + "', '" + question + "', '" + new Date() + "',  '" + title + "', '" + filename + "', '" + campus + "', 0, 0,  '" + filestat + "', '" + user + "');", (error, result, row) => {
-    if (error) {
-      res.send({ ...responseObj, success: false, message: "Error Posting Assignment", data: error })
-    } else {
-      res.send({ ...responseObj, success: true, message: "Assignment Posted Successfully" })
-
-    }
-  })
 
 })
 
@@ -1257,6 +1689,40 @@ app.post('/transactions/validate', (req, res) => {
 
 
 
+app.delete('/votes/:periodId', (req, res) => {
+
+  pool.query("DELETE FROM votes WHERE subject_id='" + req.params.periodId + "'", (error, result, row) => {
+    if (error) {
+      res.send({ ...responseObj, message: "Error removing Votes" });
+    } else {
+
+      pool.query("UPDATE schedule SET correct=" + 0 + ", wrong=" + 0 + " WHERE id='" + req.params.periodId + "'", (error, result, row) => {
+        if (error) {
+          res.send({ ...responseObj, message: "Error Clearing Votes" });
+          console.log(error)
+        } else {
+
+          res.send({
+            ...responseObj,
+            success: true,
+            message: "Votes Cleared Successfully ",
+          });
+
+
+        }
+      })
+
+    }
+  })
+
+})
+
+
+
+
+
+
+
 app.post("/votes", (req, res) => {
   const { subject, subject_id, type, user, campus, department, level } =
     req.body;
@@ -1363,9 +1829,9 @@ app.post('/paybook', (req, res) => {
   pool.query("SELECT * FROM users WHERE email='" + receiver + "'", (error, result, row) => {
     RECEIVER = result[0];
 
-    const senderBalance = SENDER?.coins - amount;
+    const senderBalance = SENDER.coins - amount;
 
-    const receiverBalance = percent + RECEIVER?.coins;
+    const receiverBalance = percent + RECEIVER.coins;
 
 
     pool.query("UPDATE users SET coins=" + receiverBalance + " WHERE email='" + receiver + "'", (error, result, row) => {
@@ -1468,6 +1934,8 @@ app.get("/votes/user/:user", (req, res) => {
     }
   });
 });
+
+
 
 app.get("/votes/:campus/:department/:level/:subject", (req, res) => {
   pool.query(
@@ -1601,35 +2069,24 @@ app.get("/allPost/:email", (req, res) => {
 
 
 app.post("/addArticle", (req, res) => {
-  let { title, content, id, author, editor, editorname, fileName } = req.body;
 
-  pool.query(
-    "INSERT INTO `files` (`id`, `author`, `editor`, `fileName`, `dateCreated`, `dateLastEdited`, `content`, `title`, `editorname`) VALUES ('" +
-    id +
-    "', '" +
-    author +
-    "', '" +
-    editor +
-    "', '" +
-    fileName +
-    "', '" +
-    new Date() +
-    "', '" +
-    new Date() +
-    "', '" + content + "', '" + title + "', '" + editorname + "');",
-    (error, result, row) => {
-      if (error) {
+  const data = JSON.stringify(req.body);
 
-        res.send({ ...responseObj, message: "Error Posting" });
-      } else {
-
-
-        res.send({ ...responseObj, message: "New File Created", success: true });
-      }
-    }
+  fs.writeFileSync(
+    req.body.fileName,
+    data
   );
+  res.send('File Written')
+
+
+
 
 });
+
+
+
+
+
 
 app.get('/corscheck', (req, res) => {
 
@@ -1690,10 +2147,9 @@ app.get("/deletePost/:id", (req, res) => {
 
 
 
-app.get('/downloadFile/:dir', (req, res) => {
-  const fileArr = req.params.dir.split("*")
-  let file = "User" + fileArr[0] + "/" + fileArr[1]
-  res.download('./Documents/' + file)
+app.get('/downloadFile/:fileName', (req, res) => {
+
+  res.download(`./${req.params.fileName}`)
 })
 
 
@@ -1760,7 +2216,7 @@ app.get("/download/:fileId", (req, res) => {
         if (result.length > 0) {
           fs.writeFileSync(
             result[0].fileName,
-            JSON.stringify(result[0])
+            JSON.stringify(result[0],)
           );
           setTimeout(() => {
             res.download(result[0].fileName);
@@ -1809,9 +2265,9 @@ app.post('/updatecoins', (req, res) => {
 
         let bal = 0;
         if (type === "credit") {
-          bal = parseFloat(result[0]?.coins) + parseFloat(coins);
+          bal = parseFloat(result[0].coins) + parseFloat(coins);
         } else {
-          bal = parseFloat(result[0]?.coins) - parseFloat(coins);
+          bal = parseFloat(result[0].coins) - parseFloat(coins);
         }
 
         pool.query("UPDATE users set coins=" + bal + " WHERE email='" + email + "'", (err, res, row) => {
@@ -1895,7 +2351,114 @@ app.get('/reset/:email', (req, res) => {
   pool.query("SELECT password from users WHERE email='" + req.params.email + "'", (err, result, row) => {
     if (result.length > 0) {
 
-      // mailer({ recipients: req.params.email, subject: 'Reset Password - Microskool', message: 'Your current passord hint is:[' + result[0].password.substring(0, 1) + '********' + result[0].password.substring(result[0].password.length - 1) + '] (If you still cannot remember)  Use this code to confirm your request to reset your password: ' + code })
+
+      const mailOptions = {
+        from: 'support@dropoud.com',
+        to: req.params.email,
+        subject: 'Password Reset OTP',
+        html: `
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dropoud Password Reset OTP</title>
+    <style>
+        /* Reset some default styles */
+        body, p {
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Set background color and text color for the whole email */
+        body {
+            background-color: #f0f0f0;
+            color: #333;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Header styles */
+        .header {
+            background-color: rgb(83,83,170);
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Content styles */
+        .content {
+            padding: 20px;
+        }
+
+        /* Footer styles */
+        .footer {
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Dropoud</h1>
+        <p>Account Security</p>
+    </div>
+    <div class="content">
+       
+     Your One-Time Password (OTP) for account verification is: <h2>${code}</h2>.
+
+<h4>Instructions:</h4>
+<ol>
+<li>
+Do not share this OTP with anyone.
+
+</li>
+
+<li>
+This code is valid for the next 10 minutes.
+
+</li>
+
+<li>
+
+Use this OTP for account verification on our platform.
+</li>
+
+<li>
+Ignore this message if you did not request an OTP.
+
+</li>
+<li>
+
+No one from Dropoud will ask for your OTP.
+</li>
+
+</ol>
+For support or inquiries, contact our customer service at 090609666606.
+
+    </div>
+   
+    <div class="footer">
+        <p>&copy; 2023 Dropoud | <a href="https://www.dropoud.com">Visit our website</a></p>
+    </div>
+</body>
+</html>
+
+  `,
+      };
+
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error('Error sending email:', error);
+
+        } else {
+          console.log('Email sent:', info.response);
+
+        }
+      });
+
+
       res.send({ ...responseObj, success: true, message: "Check your mail for Password Recovery instructions" })
 
     } else {
@@ -1907,6 +2470,11 @@ app.get('/reset/:email', (req, res) => {
 
 
 })
+
+
+
+
+
 
 app.post('/reset/', (req, res) => {
   const { email, currentPassword, code, newPassword } = req.body;
@@ -1964,8 +2532,266 @@ app.post('/sendemail/', function (req, res) {
 
 
 
-// Add the route handler to your express app or any other backend framework
-app.post('/articles', generateArticle);
+
+app.get("/support", (req, res) => {
+  pool.query("SELECT * FROM support", (error, result, row) => {
+    if (error) {
+      res.send({
+        ...responseObj,
+        success: false,
+        message: "Error Fetching support",
+        data: error,
+      });
+    } else {
+      res.send({
+        ...responseObj,
+        success: true,
+        message: "Support Fetched Successfully",
+        data: result,
+      });
+    }
+  });
+})
+
+
+
+
+app.get("/support/pending", (req, res) => {
+  pool.query("SELECT * FROM support WHERE status='Pending'", (error, result, row) => {
+    if (error) {
+      res.send({
+        ...responseObj,
+        success: false,
+        message: "Error Fetching support",
+        data: error,
+      });
+    } else {
+      res.send({
+        ...responseObj,
+        success: true,
+        message: "Pending Support Fetched Successfully",
+        data: result,
+      });
+    }
+  });
+})
+
+
+
+app.get("/support/single/:email", (req, res) => {
+  pool.query("SELECT * FROM support WHERE email='" + req.params.email + "'", (error, result, row) => {
+    if (error) {
+      res.send({
+        ...responseObj,
+        success: false,
+        message: "Error Fetching support",
+        data: error,
+      });
+    } else {
+      res.send({
+        ...responseObj,
+        success: true,
+        message: "Pending Support Fetched Successfully",
+        data: result,
+      });
+    }
+  });
+})
+
+
+
+
+
+app.post("/support", (req, res) => {
+  const { email, name, message } = req.body;
+
+
+  if (email || name || message) {
+
+
+
+    pool.query("INSERT INTO `support` (`id`, `email`, `name`, `message`, `date`, `status`) VALUES (NULL, '" + email + "', '" + name + "', '" + message + "', '" + new Date() + "', 'Pending')", (error, result, row) => {
+      if (error) {
+        res.send({
+          ...responseObj,
+          success: false,
+          message: "Error Submitting Support",
+          data: error,
+        });
+      } else {
+        res.send({
+          ...responseObj,
+          success: true,
+          message: "Support submitted successfully, check your mailbox for feedback",
+          data: [],
+        });
+      }
+    });
+  } else {
+    res.send({
+      ...responseObj,
+      success: false,
+      message: "All Fields are required",
+      data: [],
+    });
+  }
+})
+
+
+
+
+
+
+
+app.put("/support", (req, res) => {
+  const { id, status } = req.body;
+
+
+  if (id || status) {
+
+
+
+    pool.query("UPDATE `support` SET `status` = '" + status + "' WHERE `support`.`id` = " + id + ";", (error, result, row) => {
+      if (error) {
+        res.send({
+          ...responseObj,
+          success: false,
+          message: "Error Updating Support",
+          data: error,
+        });
+      } else {
+        res.send({
+          ...responseObj,
+          success: true,
+          message: "Support Status Updated",
+          data: [],
+        });
+      }
+    });
+  } else {
+    res.send({
+      ...responseObj,
+      success: false,
+      message: "All Fields are required",
+      data: [],
+    });
+  }
+})
+
+
+
+
+
+
+
+
+
+
+
+app.post("/sendmail", (req, res) => {
+
+  const mailOptions = {
+    from: 'support@dropoud.com',
+    to: req.body.email,
+    subject: req.body.subject,
+    html: `
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Email Subject</title>
+    <style>
+        /* Reset some default styles */
+        body, p {
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Set background color and text color for the whole email */
+        body {
+            background-color: #f0f0f0;
+            color: #333;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Header styles */
+        .header {
+            background-color: rgb(83,83,170);
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Content styles */
+        .content {
+            padding: 20px;
+        }
+
+        /* Footer styles */
+        .footer {
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Dropoud</h1>
+        <p>${req.body.department}</p>
+    </div>
+    <div class="content">
+        <h2>Hello ${req.body.name}!</h2>
+        <p>${req.body.message}</p>
+         <p>
+    Please Get back to us if you have further questions
+    </p>
+    </div>
+   
+    <div class="footer">
+        <p>&copy; 2023 Dropoud | <a href="https://www.dropoud.com">Visit our website</a></p>
+    </div>
+</body>
+</html>
+
+  `,
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error('Error sending email:', error);
+      res.send({
+        ...responseObj,
+        success: false,
+        message: "Error sending email",
+        data: [],
+      });
+    } else {
+      console.log('Email sent:', info.response);
+      res.send({
+        ...responseObj,
+        success: true,
+        message: "Support Mail Sent Successfully",
+        data: [],
+      });
+    }
+  });
+
+})
+
+
+
+app.get('/version', (req, res) => {
+  pool.query("SELECT * FROM app WHERE app_name='Dropoud'", (err, result, row) => {
+    console.log(result[0])
+    res.send(result[0])
+  })
+})
+
+
+
 
 
 
