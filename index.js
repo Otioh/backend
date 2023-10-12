@@ -209,6 +209,22 @@ const multerStorage = multer.diskStorage({
   }
 })
 
+const multerStorageThumbnail = multer.diskStorage({
+
+  destination: (req, file, cb) => {
+
+
+
+    cb(null, `assets/videos/thumbnails`)
+
+
+  },
+  filename: (req, file, cb) => {
+
+    cb(null, `${req.params.lid}.jpg`)
+  }
+})
+
 
 const multerStorageLecture = multer.diskStorage({
   destination: async (req, file, cb) => {
@@ -278,6 +294,11 @@ const upload = multer({
 
 const uploadLecture = multer({
   storage: multerStorageLecture, limits: { fileSize: 300 * 1024 * 1024 }
+})
+
+
+const uploadThumbnail = multer({
+  storage: multerStorageThumbnail, limits: { fileSize: 300 * 1024 * 1024 }
 })
 
 
@@ -566,11 +587,20 @@ function formatContentWithTagsAndImages(articleContent) {
 
 
 
-app.post('/lecture', uploadLecture.single('lecture'), function (req, res, next) {
+// app.post('/lecture', uploadLecture.single('lecture'), function (req, res, next) {
 
 
 
-  res.send({ ...responseObj, message: "Lecture Stream Initiated", success: true })
+//   res.send({ ...responseObj, message: "Lecture Stream Initiated", success: true })
+// })
+
+
+
+app.post('/lecture/:lid', uploadThumbnail.single('thumbnail'), function (req, res, next) {
+
+
+
+  res.send({ ...responseObj, message: "Thumbnail Sent", success: true })
 })
 
 
@@ -580,7 +610,7 @@ app.post('/lecture', uploadLecture.single('lecture'), function (req, res, next) 
 app.post('/lecture/:campus/:user/:course/:lecturer/:lid/:topic', uploadLecture.single('lecture'), function (req, res, next) {
 
 
-  console.log('first')
+  console.log('first  here')
   res.send({ ...responseObj, message: "Lecture Stream Initiated ", success: true })
 })
 
@@ -980,7 +1010,7 @@ No one from Dropoud will ask for your OTP.
 </li>
 
 </ol>
-For support or inquiries, contact our customer service at 090609666606.
+For support or inquiries, contact our customer service at 07051997777.
 
     </div>
    
@@ -1487,6 +1517,58 @@ app.get('/assignments', (req, res) => {
 
     } else {
       res.send({ ...responseObj, success: true, message: "Assignments Fetched Successfully", data: result })
+
+    }
+  })
+
+})
+
+
+app.post('/comments', (req, res) => {
+  const { ass_id, user, reply_id, comment, user_image, user_name } = req.body;
+
+  if (comment === undefined || comment === null || comment === "") {
+    res.send({ ...responseObj, success: false, message: "comment is required" })
+  } else {
+
+    pool.query("INSERT INTO `comments` (`id`, `ass_id`, `user`, `reply_id`, `comment`, `date`, `user_image`, `user_name`) VALUES (NULL, '" + ass_id + "', '" + user + "', '" + reply_id + "', '" + comment + "', '" + new Date() + "', '" + user_image + "', '" + user_name + "')", (error, result, row) => {
+      if (error) {
+        res.send({ ...responseObj, success: false, message: "Error Posting Comment", data: error })
+
+      } else {
+        res.send({ ...responseObj, success: true, message: "Comment Posted Successfully", })
+      }
+    })
+
+  }
+})
+
+
+
+app.get('/comments', (req, res) => {
+
+  pool.query("SELECT * FROM comments ", (error, result, row) => {
+    if (error) {
+      res.send({ ...responseObj, success: false, message: "Error Fetching comments", data: error })
+
+    } else {
+      res.send({ ...responseObj, success: true, message: "comments Fetched Successfully", data: result })
+
+    }
+  })
+
+})
+
+
+
+app.get('/comments/:assignment_id', (req, res) => {
+
+  pool.query("SELECT * FROM comments WHERE ass_id='" + req.params.assignment_id + "'", (error, result, row) => {
+    if (error) {
+      res.send({ ...responseObj, success: false, message: "Error Fetching Comments", data: error })
+
+    } else {
+      res.send({ ...responseObj, success: true, message: "Comments Fetched Successfully", data: result })
 
     }
   })
@@ -2435,7 +2517,7 @@ No one from Dropoud will ask for your OTP.
 </li>
 
 </ol>
-For support or inquiries, contact our customer service at 090609666606.
+For support or inquiries, contact our customer service at 07051997777.
 
     </div>
    

@@ -16,6 +16,8 @@
 
 
 
+
+
 #### Authentication
 - **Endpoint**: `/auth/{user_email}`
 - **Method**: GET
@@ -43,7 +45,6 @@
 - **Endpoint**: `/reset/{user_email}`
 - **Method**: GET
 - **Description**: Verify the user email anf sends a reset code to the user's email.
-
 
 
 
