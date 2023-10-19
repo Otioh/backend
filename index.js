@@ -93,6 +93,7 @@ const pool = mysql.createPool({
 });
 // const endpoint = 'http://localhost:5000/';
 const endpoint = 'http://192.168.1.44:5000/'
+// const endpoint = 'http://192.168.43.31:5000/'
 
 
 
@@ -197,10 +198,10 @@ const multerStorage = multer.diskStorage({
     cb(null, 'assets')
   },
   filename: (req, file, cb) => {
-    let ext = file.mimetype.split('/')[1];
+    let ext = 'png';
     const email = req.params.email;
 
-    let name = email ? `${email.split('@')[0]}--${Math.random(0, 300)}` : 'email';
+    let name = email ? `${email.split('@')[0]}${email.split('@')[1].split('.')[0]}` : 'email';
     let saveName = name + "." + ext;
     cb(null, `${name}.${ext}`)
     pool.query("UPDATE users SET image='" + endpoint + "assets/" + saveName + "' WHERE email='" + email + "'", (error, result, row) => {
@@ -648,6 +649,19 @@ app.get('/lectures/:campus', (req, res) => {
 
 })
 
+app.get('/lectures', (req, res) => {
+  pool.query("SELECT * FROM lectures", (error, result, row) => {
+    if (error) {
+      res.send({ ...responseObj, message: "Error Retrieving Lectures" })
+    } else {
+      res.send({ ...responseObj, data: result, success: true, message: "Lectures Retrieved Successfully" })
+    }
+
+  })
+
+
+})
+
 
 
 app.get('/filesdir', (req, res) => {
@@ -693,7 +707,7 @@ app.post('/intent', (req, res) => {
 
                   } else {
                     if (result.length > 0) {
-                      res.send({ ...responseObj, message: "Intent Set", success: true, data: { rate: '295/Hour', user: result[0].user } })
+                      res.send({ ...responseObj, message: "Intent Set", success: true, data: { rate: 'NGN75/Hour', user: result[0].user } })
 
                     }
                   }
@@ -799,7 +813,7 @@ app.get('/:user/lectures/watch/:id/:index', (req, res) => {
                       const videoStream = fs.createReadStream(videoFilePath);
 
 
-                      let myCoins = parseInt(meUser.coins) - (25 / 2);
+                      let myCoins = parseInt(meUser.coins) - 95;
 
 
                       pool.query("UPDATE users SET coins=" + myCoins + " WHERE email='" + meUser.email + "'", (err) => {
